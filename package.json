@@ -1,0 +1,12 @@
+{
+  "name": "ubif-nextgen-plus",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "check": "node --check extension/model.js && node --check extension/content.js && node --check extension/page.js && node --check extension/search-model.js && node --check extension/search.js && node --check extension/scanner.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}
