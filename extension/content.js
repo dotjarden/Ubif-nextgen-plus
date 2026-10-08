@@ -27,9 +27,9 @@
   const stripCount = name => String(name || '').replace(/\s*\(\d+\)\s*$/, '').trim();
   const tabName = kind => kind === 'arrivals'
     ? (new URL(location.href).searchParams.get('tab') || 'Arrivals')
-    : (stripCount(document.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('aria-label') || document.querySelector('[role="tab"][aria-selected="true"]')?.textContent) || new URL(location.href).searchParams.get('tab') || 'All');
+    : (stripCount(document.querySelector('[role="tab"][aria-selected="true"]:not([data-ubif-board-tab])')?.getAttribute('aria-label') || document.querySelector('[role="tab"][aria-selected="true"]:not([data-ubif-board-tab])')?.textContent) || new URL(location.href).searchParams.get('tab') || 'All');
   const tabNames = () => {
-    const names = [...document.querySelectorAll('[role="tab"]')].map(el => stripCount(el.getAttribute('aria-label') || el.textContent)).filter(Boolean);
+    const names = [...document.querySelectorAll('[role="tab"]:not([data-ubif-board-tab])')].map(el => stripCount(el.getAttribute('aria-label') || el.textContent)).filter(Boolean);
     return names.length ? [...new Set(names)] : [tabName('workorders')];
   };
   const profileKey = (kind, tab) => PREFIX + (kind === 'arrivals' ? `arrivals.${tab}` : tab);
@@ -744,7 +744,7 @@
     observer.disconnect();
     try {
       const kind = pageKind();
-      if (!ready || !kind) { cleanup(); return; }
+      if (!ready || !kind || document.documentElement.hasAttribute('data-ubif-board-active')) { cleanup(); return; }
       const found = discover();
       if (!found) { cleanup(); return; }
       const tab = tabName(kind);

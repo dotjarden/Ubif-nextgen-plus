@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "check": "node --check extension/model.js && node --check extension/content.js && node --check extension/page.js && node --check extension/search-model.js && node --check extension/search.js && node --check extension/scanner.js"
+    "check": "node --check extension/model.js && node --check extension/content.js && node --check extension/page.js && node --check extension/search-model.js && node --check extension/search.js && node --check extension/scanner.js && node --check extension/board-model.js && node --check extension/board.js"
   },
   "devDependencies": {
     "jsdom": "^26.1.0"

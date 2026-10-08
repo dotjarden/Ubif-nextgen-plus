@@ -82,3 +82,10 @@ test('universal search requests do not contaminate the workorder column feed', a
   assert.equal(w.__fetchCalls.length, 1);
   assert.deepEqual(seen, []);
 });
+
+test('board pagination does not replace the native table feed', async t => {
+  const { dom, w, seen } = boot(); t.after(() => dom.window.close());
+  await w.fetch('/api/workorders', { method: 'POST', body: '{"page":2}', ubifPlusBoard: true });
+  await flush(w);
+  assert.deepEqual(seen, []);
+});

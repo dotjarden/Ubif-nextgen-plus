@@ -17,7 +17,7 @@
   if (nativeFetch) {
     window.fetch = async function (input, init) {
       // Universal search results must not replace the workorder table feed.
-      if (init?.ubifPlusSearch) return nativeFetch(input, init);
+      if (init?.ubifPlusSearch || init?.ubifPlusBoard) return nativeFetch(input, init);
       // The portal can hand the body over inside a Request object. A Request body
       // can only be read once, so clone it before the request goes out.
       let pendingBody = null;

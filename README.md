@@ -2,6 +2,18 @@
 
 Chrome Manifest V3 extension for `https://portal.ubreakifix.net`.
 
+## Update Today board (0.5.0)
+
+Open **Workorders → Update Today**, beside **Ready for pickup**, for active orders due today or earlier. Select **Include tomorrow** to expand the queue.
+
+- Change the next update date/time without changing WO status. Use **In 2 days** or enter a parts arrival date.
+- Drag to **Need to order**, **Awaiting item**, **Awaiting callback**, or **Ready for work**, then save with a date and note. Other transitions use the full Portal workflow.
+- Read and add Portal notes. The board refreshes every minute while visible and on focus.
+
+Dates use the displayed browser timezone. Orders without update dates are excluded. The picker has no three-day limit, but Portal validates saves. Failed or partial saves are reported; stale orders must be refreshed before saving.
+
+Tests and local preview pass. Live Portal writes still need verification.
+
 ## Scan purchase-order receiving labels without clicking
 
 On `/boh/inventory/purchase-orders/<order>/receive`, scan part labels repeatedly with a keyboard-mode scanner ending in **Enter** or **Tab**. You do not need to click the scan area between labels. The portal tab must be active.
@@ -16,7 +28,7 @@ Scan a work-order barcode on portal pages outside purchase-order receiving to op
 
 Use a keyboard-mode barcode scanner configured to end each scan with **Enter** or **Tab**. Detection requires a rapid burst (at most 80 ms between keys and a 40 ms average including the terminator). Ordinary typing retains its normal behavior. When scanning into an input or textarea, its previous value and selection are restored before navigation. Unknown barcode formats, external URLs, and longer bare numbers such as IMEIs do not trigger navigation. Outside purchase-order receiving, other barcode types still use the portal's existing workflows. Scanning inside an embedded frame is not supported.
 
-Reload the extension and the portal to activate version **0.4.2**. Scanner routing is covered by automated tests; physical scanner timing still needs verification with your scanner.
+Reload the extension and the portal to activate version **0.5.0**. Scanner routing is covered by automated tests; physical scanner timing still needs verification with your scanner.
 
 ## Universal search
 
@@ -61,7 +73,7 @@ The dialog and injected cells use the portal’s own `--aui-*` design tokens (Ap
 
 After a source change, reload the extension in the extension manager, then reload the portal page. Search’s unpacked-extension support is browser-specific; the packaged target is Chrome.
 
-No build step or runtime dependencies. All seven files in `extension/` are needed (`scanner.js`, `manifest.json`, `model.js`, `content.js`, `page.js`, `search-model.js`, `search.js`).
+No build step or runtime dependencies. All files in `extension/` are needed, including `board-model.js` and `board.js`.
 
 ## Scope and privacy
 
@@ -71,6 +83,7 @@ The content script loads on this portal host to handle client-side navigation fr
 - `page.js` only *reads responses the portal already made* (`POST /api/workorders`) and forwards them to the content script with `postMessage`. It does not send data anywhere.
 - If a response is missed (for example the content script loaded late), the content script may re-issue the portal’s **own last captured request body once**, unchanged, to fill the visible cells. No new queries, no other endpoints, no credentials or customer data leave the page.
 - Universal search sends read-only queries to the portal’s same-origin `/api/customers`, `/api/workorders` (POST lookup), `/api/repair/available-parts`, `/api/arrivals/upcoming-arrivals`, `/api/customers/<id>/arrivals` for a unique customer match, and `/api/boh/inventory/<serial>` endpoints using the existing session. Search results do not overwrite the column data feed.
+- The Update Today board reads current-store work orders and notes and writes user-requested dates, supported status changes, workflow resets and notes through same-origin Portal APIs.
 - No analytics, no telemetry, no third-party requests.
 
 Only columns this catalog knows are offered as data columns; the adapter reads the observed `table > thead > tr > th[data-column-id]` structure for the portal-rendered set, and unknown headers still appear (grouped under **Table**) without invented fields. Portal markup changes may require an adapter update.

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "UBIF NextGen Plus",
-  "description": "Scan work orders and purchase-order receiving labels without focusing a field, search the portal, and customize columns.",
-  "version": "0.4.2",
+  "description": "Update Today work order board, Portal notes and scheduling, scanning, universal search, and custom columns.",
+  "version": "0.5.0",
   "permissions": [
     "storage"
   ],
@@ -26,7 +26,9 @@
         "model.js",
         "content.js",
         "search-model.js",
-        "search.js"
+        "search.js",
+        "board-model.js",
+        "board.js"
       ],
       "run_at": "document_idle"
     }
