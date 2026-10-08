@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "UBIF NextGen Plus",
   "description": "Scan work orders and purchase-order receiving labels without focusing a field, search the portal, and customize columns.",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "permissions": [
     "storage"
   ],

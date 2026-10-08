@@ -6,9 +6,9 @@ Chrome Manifest V3 extension for `https://portal.ubreakifix.net`.
 
 On `/boh/inventory/purchase-orders/<order>/receive`, scan part labels repeatedly with a keyboard-mode scanner ending in **Enter** or **Tab**. You do not need to click the scan area between labels. The portal tab must be active.
 
-Rapid scans are delivered to the portal's existing `scanDetected` handler. The portal retains its serial matching, duplicate checks, access checks, OEM/IMEI prompts, and **Receive Parts** confirmation. Scans on this page never navigate to work orders. Open dialogs keep their native scanning behavior; ordinary typing is unchanged. If a scan lands in an input or textarea, the previous value and selection are restored.
+Rapid scans are delivered to the portal's existing `scanDetected` handler. The portal retains its serial matching, duplicate checks, access checks, OEM/IMEI prompts, and **Receive Parts** confirmation. Scans on this page never navigate to work orders. When the **Scan OEM Serial** popup opens, its input receives focus automatically. Scan the OEM serial and press **Enter** (or use the scanner’s Enter/Tab suffix) to validate it and activate the portal’s enabled **Confirm** button. Invalid serials stay in the popup for correction. Other dialogs keep their native scanning behavior; ordinary typing is unchanged. If a scan lands in an input or textarea, the previous value and selection are restored.
 
-The adapter targets the observed `po-receive-container` markup and `scanDetected` event contract from the portal's public frontend code. Automated tests cover repeated scans, Enter/Tab, field restoration, dialog/loading guards, and route changes. A physical scanner check on the live receiving page is still needed.
+The adapter targets the observed `po-receive-container` markup and `scanDetected` event contract from the portal's public frontend code. Automated tests cover repeated scans, Enter/Tab, field restoration, dialog/loading guards, OEM focus and confirmation, invalid OEM serials, and route changes. A physical scanner check on the live receiving page is still needed.
 
 ## Scan to open a work order
 
@@ -16,7 +16,7 @@ Scan a work-order barcode on portal pages outside purchase-order receiving to op
 
 Use a keyboard-mode barcode scanner configured to end each scan with **Enter** or **Tab**. Detection requires a rapid burst (at most 80 ms between keys and a 40 ms average including the terminator). Ordinary typing retains its normal behavior. When scanning into an input or textarea, its previous value and selection are restored before navigation. Unknown barcode formats, external URLs, and longer bare numbers such as IMEIs do not trigger navigation. Outside purchase-order receiving, other barcode types still use the portal's existing workflows. Scanning inside an embedded frame is not supported.
 
-Reload the extension and the portal to activate version **0.4.1**. Scanner routing is covered by automated tests; physical scanner timing still needs verification with your scanner.
+Reload the extension and the portal to activate version **0.4.2**. Scanner routing is covered by automated tests; physical scanner timing still needs verification with your scanner.
 
 ## Universal search
 

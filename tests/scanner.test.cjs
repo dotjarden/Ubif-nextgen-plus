@@ -6,9 +6,13 @@ const vm = require('node:vm');
 const script = fs.readFileSync(`${__dirname}/../extension/scanner.js`, 'utf8');
 function boot(t) {
   const dom = new JSDOM('<input value="existing note"><textarea>previous text</textarea><button>Save</button>', { url: 'https://portal.ubreakifix.net/repair/workorders' });
-  t.after(() => dom.window.close());
+  const observers = [];
+  class Observer extends dom.window.MutationObserver {
+    constructor(callback) { super(callback); observers.push(this); }
+  }
+  t.after(() => { observers.forEach(observer => observer.disconnect()); dom.window.close(); });
   const w = dom.window, navigations = [];
-  const context = vm.createContext({ window: { addEventListener: w.addEventListener.bind(w), dispatchEvent: w.dispatchEvent.bind(w), location: { get pathname() { return w.location.pathname; }, assign: href => navigations.push(href) } }, document: w.document, URL: w.URL, Event: w.Event, CustomEvent: w.CustomEvent, HTMLInputElement: w.HTMLInputElement, HTMLTextAreaElement: w.HTMLTextAreaElement });
+  const context = vm.createContext({ window: { setTimeout: w.setTimeout.bind(w), addEventListener: w.addEventListener.bind(w), dispatchEvent: w.dispatchEvent.bind(w), location: { get pathname() { return w.location.pathname; }, assign: href => navigations.push(href) } }, document: w.document, MutationObserver: Observer, URL: w.URL, Event: w.Event, CustomEvent: w.CustomEvent, HTMLInputElement: w.HTMLInputElement, HTMLTextAreaElement: w.HTMLTextAreaElement });
   vm.runInContext(script, context);
   let time = 100;
   function key(key, target = w.document.body, delay = 10, extras = {}) {
@@ -140,4 +144,71 @@ test('SPA navigation resets pending scans and restores work-order routing outsid
   b.scan('30787644');
   assert.deepEqual(scans, []);
   assert.deepEqual(b.navigations, ['/repair/workorder/30787644']);
+});
+
+function showOEM(b, validate = true) {
+  const dialog = b.w.document.createElement('section');
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-label', 'Scan OEM Serial');
+  dialog.innerHTML = '<input type="text"><button disabled>Confirm</button><button>Cancel</button>';
+  b.w.document.body.append(dialog);
+  const input = dialog.querySelector('input'), confirm = dialog.querySelector('button');
+  let confirmed = 0;
+  confirm.addEventListener('click', () => { confirmed++; dialog.remove(); });
+  b.w.addEventListener('scanDetected', e => {
+    if (!dialog.isConnected) return;
+    // Model the observed portal handler, including React's deferred render.
+    b.w.setTimeout(() => {
+      input.value = e.detail.scan;
+      confirm.disabled = !validate || !/^[0-9A-Za-z]{14,22}$/.test(e.detail.scan);
+    }, 0);
+  });
+  return { dialog, input, confirm, get confirmed() { return confirmed; } };
+}
+const settle = () => new Promise(resolve => setTimeout(resolve, 20));
+test('OEM popup focuses on each opening and scan Enter confirms once after native validation', async t => {
+  const b = boot(t); receive(b);
+  for (let i = 0; i < 2; i++) {
+    const modal = showOEM(b);
+    await settle();
+    assert.equal(b.w.document.activeElement, modal.input);
+    b.scan('ABC1234567890123', { target: modal.input });
+    assert.equal(modal.confirmed, 0);
+    await settle();
+    assert.equal(modal.confirmed, 1);
+  }
+  assert.deepEqual(b.navigations, []);
+});
+test('invalid OEM scans stay open and unrelated updates do not steal focus', async t => {
+  const b = boot(t); receive(b);
+  const modal = showOEM(b);
+  await settle();
+  b.scan('INVALID', { target: modal.input });
+  await settle();
+  assert.equal(modal.confirmed, 0);
+  assert.equal(modal.confirm.disabled, true);
+  const cancel = modal.dialog.querySelectorAll('button')[1];
+  cancel.focus();
+  modal.dialog.append(b.w.document.createElement('span'));
+  await settle();
+  assert.equal(b.w.document.activeElement, cancel);
+});
+test('OEM confirmation requires native enablement and is canceled on navigation', async t => {
+  const b = boot(t); receive(b);
+  const modal = showOEM(b);
+  await settle();
+  b.scan('ABC1234567890123', { target: modal.input });
+  b.w.history.pushState({}, '', '/repair/workorders');
+  await settle();
+  assert.equal(modal.confirmed, 0);
+});
+
+test('OEM scans cannot confirm while the portal keeps Confirm disabled', async t => {
+  const b = boot(t); receive(b);
+  const modal = showOEM(b, false);
+  await settle();
+  b.scan('ABC1234567890123', { target: modal.input });
+  await settle();
+  assert.equal(modal.confirmed, 0);
+  assert.equal(modal.dialog.isConnected, true);
 });

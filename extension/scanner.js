@@ -11,6 +11,34 @@
   function receiving() {
     return /^\/boh\/inventory\/purchase-orders\/[^/]+\/receive\/?$/.test(window.location.pathname);
   }
+  const dialogSelector = '[role="dialog"]:not([hidden]):not([aria-hidden="true"]), dialog[open]';
+  let focusedOEM = null, pendingOEM = null;
+  function oemDialog() {
+    if (!receiving()) return null;
+    return Array.from(document.querySelectorAll(dialogSelector)).find(dialog =>
+      dialog.getAttribute('aria-label') === 'Scan OEM Serial') || null;
+  }
+  function syncOEM() {
+    const dialog = oemDialog();
+    const input = dialog?.querySelector('input[type="text"]:not(:disabled)');
+    if (input !== focusedOEM) {
+      focusedOEM = input || null;
+      if (input) { reset(); input.focus(); }
+    }
+    if (!pendingOEM) return;
+    if (dialog !== pendingOEM.dialog || window.location.pathname !== pendingOEM.route) { pendingOEM = null; return; }
+    const button = Array.from(dialog.querySelectorAll('button')).find(node => node.textContent.trim() === 'Confirm');
+    // Wait for React to apply the portal's validation before using its action.
+    if (input?.value === pendingOEM.scan && button && !button.disabled && button.getAttribute('aria-disabled') !== 'true') {
+      pendingOEM = null;
+      button.click();
+    }
+  }
+  new MutationObserver(syncOEM).observe(document.documentElement, {
+    childList: true, subtree: true, attributes: true,
+    attributeFilter: ['role', 'aria-label', 'aria-hidden', 'hidden', 'open', 'disabled', 'aria-disabled', 'value']
+  });
+  syncOEM();
   function destination(value) {
     // Longer bare numbers may be phone numbers or IMEIs, not work orders.
     if (/^[1-9]\d{4,9}$/.test(value)) return `/repair/workorder/${value}`;
@@ -37,10 +65,13 @@
   window.addEventListener('keydown', event => {
     if (event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) { reset(); return; }
     const isReceiving = receiving();
-    // Let native serial/IMEI dialogs handle their own scans. Never open work orders
+    const oem = oemDialog();
+    // A new interaction cancels any delayed confirmation from a previous scan.
+    pendingOEM = null;
+    // Leave other dialogs to the portal. Never open work orders
     // from this workflow, even while its contents are loading or being replaced.
     if (isReceiving && (!document.querySelector('[data-testid="po-receive-container"]') ||
-        document.querySelector('[role="dialog"]:not([hidden]):not([aria-hidden="true"]), dialog[open]') ||
+        (!oem && document.querySelector(dialogSelector)) ||
         event.target.closest?.('[contenteditable]:not([contenteditable="false"]), input[type="password"]'))) { reset(); return; }
     const now = event.timeStamp;
     if (buffer && (now - last > MAX_GAP || event.target !== target || route !== window.location.pathname)) reset();
@@ -51,12 +82,20 @@
         event.preventDefault();
         event.stopImmediatePropagation();
         const scan = buffer;
-        restore();
+        if (!oem) restore();
         reset();
         // The portal's useListenScanDetected hook consumes this exact event.
         // Canceling the terminator also prevents its keypress detector from
         // delivering the same scan twice. Validation and Receive Parts stay native.
-        if (isReceiving) window.dispatchEvent(new CustomEvent('scanDetected', { detail: { scan } }));
+        if (isReceiving) {
+          window.dispatchEvent(new CustomEvent('scanDetected', { detail: { scan } }));
+          if (oem && /^[0-9A-Za-z]{14,22}$/.test(scan)) {
+            const pending = { dialog: oem, scan, route: window.location.pathname };
+            pendingOEM = pending;
+            window.setTimeout(syncOEM, 0);
+            window.setTimeout(() => { if (pendingOEM === pending) pendingOEM = null; }, 1000);
+          }
+        }
         else window.location.assign(href);
       } else reset();
       return;
@@ -69,8 +108,8 @@
     last = now;
     if (buffer.length > MAX_LENGTH) reset();
   }, true);
-  window.addEventListener('blur', reset);
-  window.addEventListener('pagehide', reset);
-  window.addEventListener('popstate', reset);
-  document.addEventListener('pointerdown', reset, true);
+  window.addEventListener('blur', () => { pendingOEM = null; reset(); });
+  window.addEventListener('pagehide', () => { pendingOEM = null; reset(); });
+  window.addEventListener('popstate', () => { pendingOEM = null; reset(); syncOEM(); });
+  document.addEventListener('pointerdown', () => { pendingOEM = null; reset(); }, true);
 })();
