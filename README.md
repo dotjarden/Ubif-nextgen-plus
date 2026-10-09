@@ -73,6 +73,8 @@ Download the newer ZIP, extract it, and replace the contents of the **same exten
 
 The current installation method is unpacked source: Git or ZIP updates the files, and Chrome must reload them. There is no automatic updater or Web Store listing configured here. Chrome Web Store distribution is the future path for browser-managed updates; GitHub Releases alone do not provide that behavior. See [Chrome's update lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/extensions-update-lifecycle).
 
+On Windows, a scheduled task can keep a ZIP installation's files current: see [Daily auto-update on Windows](docs/AUTO-UPDATE.md). You still reload the extension in Chrome afterward.
+
 Maintainers can create tested ZIPs and draft GitHub releases using the included [release workflow](docs/RELEASING.md).
 
 ## Make it yours
