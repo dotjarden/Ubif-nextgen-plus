@@ -296,8 +296,9 @@ test('scanning a SKU into a dialog input lets the portal keep the keystrokes', t
   dialog.append(input);
   b.w.document.body.append(dialog);
   // Scan a part SKU while focused on the dialog's input.
-  const result = b.scan('4902567890123', { target: input });
+  const result = b.scan('30787644', { target: input });
   assert.equal(result.defaultPrevented, false, 'dialog input scan is not intercepted');
+  assert.equal(input.value, '30787644', 'the SKU remains in the portal field');
   assert.deepEqual(queries, [], 'the SKU never reaches universal search');
   assert.deepEqual(b.navigations, []);
   dialog.remove();
@@ -309,9 +310,26 @@ test('scanning a SKU into a WO detail page input lets the portal keep the keystr
   b.w.history.pushState({}, '', '/repair/workorder/30787644');
   const input = b.w.document.querySelector('input');
   // Scan a part SKU while focused on the WO page input.
-  const result = b.scan('4902567890123', { target: input });
+  input.value = '';
+  const result = b.scan('30787644', { target: input });
   assert.equal(result.defaultPrevented, false, 'WO detail input scan is not intercepted');
+  assert.equal(input.value, '30787644', 'the SKU remains in the part search');
   assert.deepEqual(queries, [], 'the SKU never reaches universal search');
+  assert.deepEqual(b.navigations, []);
+});
+
+test('scanning into Products/SKUs search keeps both numeric and long barcodes in the portal field', t => {
+  const b = boot(t), queries = withSearch(b);
+  b.w.history.pushState({}, '', '/boh/inventory/store-products');
+  const input = b.w.document.querySelector('input');
+  for (const sku of ['30787644', '4902567890123']) {
+    input.value = '';
+    input.setSelectionRange(0, 0);
+    const result = b.scan(sku, { target: input });
+    assert.equal(result.defaultPrevented, false, `${sku} terminator reaches the portal`);
+    assert.equal(input.value, sku, `${sku} stays in the search field`);
+  }
+  assert.deepEqual(queries, []);
   assert.deepEqual(b.navigations, []);
 });
 

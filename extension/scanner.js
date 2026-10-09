@@ -61,22 +61,17 @@
     // still opens that route instead of being dropped.
     return url.pathname === '/' ? null : `${url.pathname}${url.search}${url.hash}`;
   }
-  /* When the scan target lives inside a portal context that handles its own
-     part/item scanning — a dialog (the "add part" modal on the WO diagnostic
-     stage, the parts-search popover, etc.) or a work order detail page — the
-     scanner must not hijack the keystrokes. Letting the portal keep them keeps
-     the scanned SKU in the field the tech expects. */
+  /* Portal part fields own their scans, including numeric SKUs that could
+     otherwise be mistaken for work-order numbers. */
   function portalOwnsTarget() {
     if (!target) return false;
+    if (target.closest?.('#ubif-universal-search')) return false;
     // Inputs inside any open dialog belong to the portal's own workflow.
     if (target.closest?.(dialogSelector)) return true;
-    // A work-order detail page (any stage: diag, repair, etc.) has its own
-    // part/item search inputs. If the target is an input or textarea on that
-    // page (but not our extension's own search), leave it alone.
-    if (/^\/repair\/workorder\/\d+/.test(window.location.pathname) &&
-        (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
-        !target.closest?.('#ubif-universal-search')) return true;
-    return false;
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return false;
+    // Work-order details and inventory pages have their own part/SKU inputs.
+    return /^\/repair\/workorder\/\d+(?:\/|$)/.test(window.location.pathname) ||
+      /^\/boh\/inventory(?:\/|$)/.test(window.location.pathname);
   }
   /* Values that are neither work orders nor portal links are sent to the
      universal search field: item barcodes, IMEIs, serial numbers, phone
@@ -123,8 +118,9 @@
     if (buffer && (now - last > MAX_GAP || event.target !== target || route !== window.location.pathname)) reset();
     if (event.key === 'Enter' || event.key === 'Tab') {
       const rapid = buffer.length >= (isReceiving ? 4 : 5) && (now - started) / buffer.length <= MAX_AVERAGE;
-      const href = !isReceiving && rapid && config.scannerOpenLinks !== false ? destination(buffer) : null;
-      const query = !isReceiving && rapid && !href && !portalOwnsTarget() && config.scannerSearch !== false ? searchTarget(buffer) : null;
+      const nativeField = !isReceiving && portalOwnsTarget();
+      const href = !nativeField && !isReceiving && rapid && config.scannerOpenLinks !== false ? destination(buffer) : null;
+      const query = !nativeField && !isReceiving && rapid && !href && config.scannerSearch !== false ? searchTarget(buffer) : null;
       const searched = Boolean(query) && toSearch(query);
       if (href || searched || (isReceiving && rapid)) {
         event.preventDefault();
