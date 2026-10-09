@@ -75,7 +75,7 @@ Maintainers can create tested ZIPs and draft GitHub releases using the included 
 
 ## Make it yours
 
-Open the toolbar popup and choose a category—or use **Find a setting**. **Full settings** opens the same controls in a browser tab.
+Open the toolbar popup and choose a category—or use **Find a setting**. **Open in tab** opens the same controls in a browser tab.
 
 | Category | Available preferences |
 | --- | --- |

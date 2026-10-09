@@ -15,6 +15,8 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Improved
 
+- Settings use a quieter sidebar, shorter labels, grouped controls, and compact footer links, with more space for the form.
+
 - Live settings now queue rapid edits, serialize writes across settings pages, reject stale reads, and reconcile when tabs resume. Numeric controls apply valid input before blur. Unrelated edits preserve active board/search/scanner state; support badges refresh immediately.
 
 - Settings expose dependencies, save automatically, restore displayed values after a failed save, and reflect changes from another settings page.

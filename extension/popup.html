@@ -2,29 +2,79 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>UBIF NextGen Plus settings</title>
 <style>
-:root{color-scheme:light dark;--accent:#8224ce;--line:#dedbe3;--soft:#625d6a;--wash:#f5f2f8;--error:#b42318}
-@media(prefers-color-scheme:dark){:root{--accent:#c697ef;--line:#403a48;--soft:#b9b2c1;--wash:#29252f;--error:#ffb4ab}}
-*{box-sizing:border-box}html{width:680px;min-width:680px}body{width:680px;height:600px;margin:0;background:Canvas;color:CanvasText;font:15px/1.5 system-ui,-apple-system,sans-serif;display:flex;flex-direction:column}
-header{flex-shrink:0;padding:16px 20px 12px;border-bottom:1px solid var(--line)}.heading{display:flex;align-items:center;gap:10px}.heading strong{font-size:17px}#ubif-version{color:var(--soft);font-size:12px;margin-right:auto}button,input{font:inherit;color:inherit}button{cursor:pointer;background:Canvas;border:1px solid var(--line);border-radius:7px;padding:6px 10px}button:hover{border-color:var(--accent)}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}header p{margin:3px 0 12px;color:var(--soft);font-size:12px}#settings-search{width:100%;padding:9px 12px;background:Canvas;border:1px solid var(--line);border-radius:8px}
-.workspace{display:flex;flex:1;min-height:0}nav{width:170px;flex:none;padding:12px 8px;border-right:1px solid var(--line);overflow:auto}nav a{display:block;border-radius:7px;text-decoration:none;color:var(--soft);padding:10px 12px;margin-bottom:3px}nav a[aria-current=page]{background:var(--wash);color:var(--accent);font-weight:650}main{flex:1;min-width:0;overflow:auto;padding:18px 20px;scroll-behavior:smooth}section{margin-bottom:16px}h2{font-size:19px;margin:0 0 6px}section>p{color:var(--soft);font-size:12px}.row{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}.row>span{flex:1;min-width:0}.row small{display:block;color:var(--soft);font-size:13px;margin-top:3px}.row input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);flex:none}.row input[type=number]{width:78px;padding:6px;background:Canvas;border:1px solid var(--line);border-radius:6px}.row:has(input:disabled){opacity:.55}.reset{margin-top:16px;font-size:12px}.hint{padding:10px;background:var(--wash);border-radius:6px}footer{border-top:1px solid var(--line);padding:9px 20px;display:flex;gap:14px;align-items:center;font-size:12px}footer a{color:var(--accent)}#ubif-status{margin:0 auto 0 0;min-height:18px;color:var(--soft)}#ubif-status[data-error=true]{color:var(--error)}[hidden]{display:none!important}
-html.full-page{width:auto;min-width:0}.full-page body{width:100%;max-width:1060px;height:100dvh;margin:auto}.full-page #open-settings{display:none}
-@media(min-width:700px){.full-page header{padding:24px}.full-page nav{width:210px}.full-page main{padding:24px 36px}.full-page .row{padding:16px 0}}
-@media(max-width:540px){.full-page .workspace{flex-direction:column}.full-page nav{display:flex;width:100%;gap:6px;padding:8px 12px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;flex-shrink:0}.full-page nav a{white-space:nowrap;margin:0;padding:8px 10px;font-size:13px}.full-page main{padding:16px}.full-page .heading{flex-wrap:wrap}.full-page .heading strong{font-size:16px}}
-@media(prefers-reduced-motion:reduce){main{scroll-behavior:auto}}
-
-footer{display:block;padding:8px 16px 12px;flex-shrink:0;background:Canvas}
-#ubif-status{margin:0 0 6px;min-height:18px;font-size:12px}
-.footer-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.footer-button{display:flex;align-items:center;gap:10px;min-height:54px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;text-decoration:none;font-size:13px;font-weight:650;transition:background .15s,border-color .15s}
-.footer-button svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.footer-button span:not(.external-arrow){min-width:0}.footer-button small{display:block;margin-top:2px;font-size:11px;font-weight:400}
-.request-button{color:CanvasText;background:var(--wash)}.request-button small{color:var(--soft)}.request-button:hover{border-color:var(--accent)}
-.coffee-button{color:#241b00;background:#ffdd57;border-color:#ffdd57}.coffee-button:hover{background:#ffe681;border-color:#ffe681}
-.external-arrow{margin-left:auto;font-size:16px}.help-card{border:1px solid var(--line);border-radius:8px;padding:12px;margin:12px 0}.help-card h3{font-size:14px;margin:0 0 6px}.help-card p{font-size:13px;margin:0}code{font-size:12px;overflow-wrap:anywhere}.help-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}.help-links a{color:var(--accent);font-size:12px}#preview-note{color:var(--soft);font-size:12px}
-@media(max-width:480px){footer{padding:6px 10px 10px}.footer-actions{gap:8px}.footer-button{padding:9px 8px;gap:7px;font-size:12px}.footer-button svg{width:19px;height:19px}.footer-button small{font-size:10px}.external-arrow{display:none}}
-@media(prefers-reduced-motion:reduce){.footer-button{transition:none}}
+:root { color-scheme: light dark; --paper:#fff; --sidebar:#f7f7f8; --text:#252629; --soft:#686b72; --line:#e5e6e8; --selected:#e9e9ed; --accent:#6d35aa; --error:#b42318; }
+@media (prefers-color-scheme:dark) { :root { --paper:#202124; --sidebar:#1a1b1e; --text:#e7e8eb; --soft:#a4a7af; --line:#37393e; --selected:#32343a; --accent:#c2a0e8; --error:#ffb4ab; } }
+* { box-sizing:border-box; }
+html { width:680px; min-width:680px; }
+body { width:680px; height:600px; margin:0; display:flex; flex-direction:column; background:var(--paper); color:var(--text); font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+button,input { font:inherit; color:inherit; }
+button { padding:6px 10px; border:1px solid var(--line); border-radius:5px; background:var(--paper); cursor:pointer; }
+button:hover:not(:disabled) { background:var(--sidebar); border-color:var(--soft); }
+button:disabled { color:var(--soft); cursor:default; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+header { flex:none; padding:16px 22px 14px; border-bottom:1px solid var(--line); }
+.heading { display:flex; align-items:center; gap:10px; }
+.heading strong { font-size:18px; font-weight:600; letter-spacing:-.3px; }
+.product-name { color:var(--soft); font-size:12px; }
+#ubif-version { color:var(--soft); font-size:11px; margin-right:auto; }
+#open-settings { font-size:12px; }
+#settings-search { width:100%; margin-top:12px; padding:7px 10px; border:1px solid var(--line); border-radius:5px; background:var(--paper); font-size:13px; }
+.workspace { display:flex; flex:1; min-height:0; }
+nav { width:168px; flex:none; padding:14px 8px; background:var(--sidebar); border-right:1px solid var(--line); overflow:auto; }
+nav a { display:block; margin:1px 0; padding:8px 12px; border-radius:4px; color:var(--soft); text-decoration:none; font-size:13px; }
+nav a:hover { color:var(--text); background:var(--selected); }
+nav a[aria-current=page] { color:var(--text); background:var(--selected); font-weight:600; }
+nav a:last-child { margin-top:18px; }
+main { flex:1; min-width:0; overflow:auto; padding:22px 26px; scrollbar-gutter:stable; }
+section { margin-bottom:12px; }
+h2 { margin:0 0 16px; font-size:19px; font-weight:600; letter-spacing:-.35px; }
+section>p { font-size:13px; color:var(--soft); }
+.settings-group { margin-top:22px; }
+.settings-group h3 { margin:0 0 4px; font-size:12px; font-weight:600; color:var(--soft); }
+.row { display:flex; align-items:center; gap:22px; padding:12px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+.row>span { flex:1; min-width:0; }
+.row small { display:block; margin-top:3px; color:var(--soft); font-size:12px; line-height:1.5; }
+.row input[type=checkbox] { width:17px; height:17px; margin:0; flex:none; accent-color:var(--accent); cursor:pointer; }
+.row input[type=number] { width:76px; padding:5px 7px; border:1px solid var(--line); border-radius:4px; background:var(--paper); font-variant-numeric:tabular-nums; }
+.row:has(input:disabled) { color:var(--soft); cursor:default; }
+.row input:disabled { opacity:.45; cursor:default; }
+.reset { margin-top:22px; padding:3px 0; border:0; border-radius:2px; background:transparent; color:var(--soft); font-size:12px; text-decoration:underline; text-underline-offset:3px; }
+.reset:hover:not(:disabled) { background:transparent; color:var(--text); }
+.hint { margin:16px 0 0; line-height:1.6; }
+.help-card { margin:20px 0; }
+.help-card h3 { margin:0 0 5px; font-size:13px; font-weight:600; }
+.help-card p { margin:0; color:var(--soft); font-size:13px; }
+code { padding:1px 3px; background:var(--sidebar); font-size:12px; overflow-wrap:anywhere; }
+.help-links { display:flex; flex-wrap:wrap; gap:14px; margin-top:20px; }
+.help-links a { color:var(--accent); font-size:12px; text-underline-offset:3px; }
+#preview-note { font-size:12px; }
+footer { flex:none; display:flex; align-items:center; gap:12px; padding:10px 16px; border-top:1px solid var(--line); }
+#ubif-status { flex:1; min-width:0; margin:0; color:var(--soft); font-size:12px; }
+#ubif-status:empty::before { content:"Changes apply immediately"; }
+#ubif-status[data-error=true] { color:var(--error); }
+.footer-actions { display:flex; gap:8px; flex:none; }
+.footer-button { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:6px 9px; border:1px solid var(--line); border-radius:5px; color:var(--text); text-decoration:none; font-size:12px; white-space:nowrap; }
+.footer-button:hover { background:var(--sidebar); border-color:var(--soft); }
+.footer-button svg { width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.coffee-button svg { color:#a67c00; }
+@media(prefers-color-scheme:dark) { .coffee-button svg { color:#e9c45a; } }
+[hidden] { display:none!important; }
+html.full-page { width:auto; min-width:0; }
+.full-page body { width:100%; max-width:960px; height:100dvh; margin:auto; }
+.full-page #open-settings { display:none; }
+@media(min-width:700px) { .full-page header { padding:20px 26px 16px; } .full-page nav { width:190px; } .full-page main { padding:28px 38px; } }
+@media(max-width:540px) {
+  .full-page .workspace { flex-direction:column; }
+  .full-page nav { display:flex; width:100%; padding:8px; gap:4px; border-right:0; border-bottom:1px solid var(--line); overflow-x:auto; }
+  .full-page nav a { margin:0; padding:7px 10px; white-space:nowrap; }
+  .full-page main { padding:20px; }
+  .product-name { display:none; }
+  footer { flex-wrap:wrap; gap:6px; padding:8px 12px; }
+  #ubif-status { flex-basis:100%; font-size:11px; }
+  .footer-actions { margin-left:auto; }
+}
 </style></head><body>
-<header><div class="heading"><strong>UBIF NextGen Plus</strong><span id="ubif-version"></span><button id="open-settings" type="button">Full settings ↗</button></div><p>Settings save automatically and apply to open portal tabs.</p><input id="settings-search" type="search" placeholder="Find a setting…" aria-label="Find a setting"></header>
+<header><div class="heading"><strong>Settings</strong><span class="product-name">UBIF NextGen Plus</span><span id="ubif-version"></span><button id="open-settings" type="button">Open in tab</button></div><input id="settings-search" type="search" placeholder="Search settings" aria-label="Find a setting"></header>
 <div class="workspace"><nav aria-label="Settings categories">
   <a href="#home" data-section="home">Home</a>
   <a href="#search" data-section="search">Universal search</a>
@@ -35,57 +85,65 @@ footer{display:block;padding:8px 16px 12px;flex-shrink:0;background:Canvas}
   <a href="#updates" data-section="updates">Updates &amp; help</a></nav><main id="settings-content">
 <section id="home" aria-labelledby="home-title"><h2 id="home-title" tabindex="-1">Home</h2>
   <label class="row"><span>Hide Home calendar<small>Hide the Arrivals schedule on the right of Home.</small></span><input type="checkbox" data-key="hideHomeCalendar" data-depends="" disabled></label>
-  <button class="reset" type="button" data-reset="home" disabled>Reset home settings</button>
+  <button class="reset" type="button" data-reset="home" disabled>Restore defaults</button>
 </section>
 <section id="search" aria-labelledby="search-title"><h2 id="search-title" tabindex="-1">Universal search</h2>
-  <label class="row"><span>Enable universal search<small>Search from the portal header.</small></span><input type="checkbox" data-key="search" data-depends="" disabled></label>
-  <label class="row"><span>Cmd/Ctrl + K shortcut<small>Focus universal search from anywhere in the portal.</small></span><input type="checkbox" data-key="searchHotkey" data-depends="search" disabled></label>
-  <label class="row"><span>Open results in a new tab<small>Keep your current portal page open.</small></span><input type="checkbox" data-key="searchNewTab" data-depends="search" disabled></label>
-  <label class="row"><span>Delay before searching<small>Milliseconds after you stop typing.</small></span><input type="number" min="100" max="2000" step="50" data-key="searchDebounceMs" data-depends="search" disabled></label>
-  <label class="row"><span>Minimum characters<small>Work orders and claims still use their higher portal minimums.</small></span><input type="number" min="3" max="10" step="1" data-key="searchMinChars" data-depends="search" disabled></label>
-  <label class="row"><span>Customers<small>Include customer results and their arrivals.</small></span><input type="checkbox" data-key="searchCustomers" data-depends="search" disabled></label>
-  <label class="row"><span>Work orders<small>Find work orders by number.</small></span><input type="checkbox" data-key="searchWorkOrders" data-depends="search" disabled></label>
-  <label class="row"><span>Items<small>Search available parts.</small></span><input type="checkbox" data-key="searchItems" data-depends="search" disabled></label>
-  <label class="row"><span>Claims<small>Include matching work orders and upcoming arrivals.</small></span><input type="checkbox" data-key="searchClaims" data-depends="search" disabled></label>
-  <label class="row"><span>Serial numbers<small>Look up inventory serial numbers.</small></span><input type="checkbox" data-key="searchSerials" data-depends="search" disabled></label>
-  <button class="reset" type="button" data-reset="search" disabled>Reset universal search settings</button>
+  <label class="row"><span>Universal search<small>Search from the portal header.</small></span><input type="checkbox" data-key="search" data-depends="" disabled></label>
+  <div class="settings-group"><h3>Behavior</h3>
+  <label class="row"><span>Keyboard shortcut<small>Press Cmd/Ctrl + K to focus search.</small></span><input type="checkbox" data-key="searchHotkey" data-depends="search" disabled></label>
+  <label class="row"><span>Open results in a new tab</span><input type="checkbox" data-key="searchNewTab" data-depends="search" disabled></label>
+  <label class="row"><span>Search delay (ms)<small>Wait after typing before searching.</small></span><input type="number" min="100" max="2000" step="50" data-key="searchDebounceMs" data-depends="search" disabled></label>
+  <label class="row"><span>Minimum characters<small>Work orders need 5 digits; claims need 6 characters.</small></span><input type="number" min="3" max="10" step="1" data-key="searchMinChars" data-depends="search" disabled></label>
+  </div>
+  <div class="settings-group"><h3>Search in</h3>
+  <label class="row"><span>Customers<small>Includes arrivals for a unique customer match.</small></span><input type="checkbox" data-key="searchCustomers" data-depends="search" disabled></label>
+  <label class="row"><span>Work orders</span><input type="checkbox" data-key="searchWorkOrders" data-depends="search" disabled></label>
+  <label class="row"><span>Items<small>Available parts.</small></span><input type="checkbox" data-key="searchItems" data-depends="search" disabled></label>
+  <label class="row"><span>Claims<small>Work orders and upcoming arrivals.</small></span><input type="checkbox" data-key="searchClaims" data-depends="search" disabled></label>
+  <label class="row"><span>Serial numbers<small>Inventory serials, not device IMEIs.</small></span><input type="checkbox" data-key="searchSerials" data-depends="search" disabled></label>
+  </div>
+  <button class="reset" type="button" data-reset="search" disabled>Restore defaults</button>
 </section>
 <section id="board" aria-labelledby="board-title"><h2 id="board-title" tabindex="-1">Update Today</h2>
-  <label class="row"><span>Enable Update Today board<small>Show the board in Workorders.</small></span><input type="checkbox" data-key="board" data-depends="" disabled></label>
-  <label class="row"><span>Include tomorrow by default<small>You can also change this on the board.</small></span><input type="checkbox" data-key="boardIncludeTomorrow" data-depends="board" disabled></label>
-  <label class="row"><span>Refresh automatically<small>Periodically refresh while the board is visible. Opening or returning to it still refreshes.</small></span><input type="checkbox" data-key="boardAutoRefresh" data-depends="board" disabled></label>
-  <label class="row"><span>Refresh interval<small>Seconds between automatic refreshes.</small></span><input type="number" min="15" max="600" step="15" data-key="boardRefreshSec" data-depends="board boardAutoRefresh" disabled></label>
+  <label class="row"><span>Update Today board<small>Show the board in Workorders.</small></span><input type="checkbox" data-key="board" data-depends="" disabled></label>
+  <label class="row"><span>Include tomorrow by default<small>Sets the board’s initial date range.</small></span><input type="checkbox" data-key="boardIncludeTomorrow" data-depends="board" disabled></label>
+  <label class="row"><span>Refresh automatically<small>Opening or returning to the board always refreshes it.</small></span><input type="checkbox" data-key="boardAutoRefresh" data-depends="board" disabled></label>
+  <label class="row"><span>Refresh interval (seconds)</span><input type="number" min="15" max="600" step="15" data-key="boardRefreshSec" data-depends="board boardAutoRefresh" disabled></label>
   <label class="row"><span>Drag cards between statuses<small>Drop a card to open the status change dialog.</small></span><input type="checkbox" data-key="boardDragDrop" data-depends="board" disabled></label>
-  <label class="row"><span>Show empty status columns<small>Keep the standard status columns visible even with no orders.</small></span><input type="checkbox" data-key="boardShowEmpty" data-depends="board" disabled></label>
-  <button class="reset" type="button" data-reset="board" disabled>Reset update today settings</button>
+  <label class="row"><span>Show empty status columns</span><input type="checkbox" data-key="boardShowEmpty" data-depends="board" disabled></label>
+  <button class="reset" type="button" data-reset="board" disabled>Restore defaults</button>
 </section>
 <section id="scanner" aria-labelledby="scanner-title"><h2 id="scanner-title" tabindex="-1">Barcode scanning</h2>
-  <label class="row"><span>Enable barcode scanning<small>Recognize rapid keyboard scans ending with Enter or Tab.</small></span><input type="checkbox" data-key="scanner" data-depends="" disabled></label>
-  <label class="row"><span>Open work orders and portal links<small>Navigate directly when a barcode contains an order number or portal URL.</small></span><input type="checkbox" data-key="scannerOpenLinks" data-depends="scanner" disabled></label>
+  <label class="row"><span>Barcode scanning<small>Use a keyboard-mode scanner ending in Enter or Tab.</small></span><input type="checkbox" data-key="scanner" data-depends="" disabled></label>
+  <div class="settings-group"><h3>Scan actions</h3>
+  <label class="row"><span>Open work orders and portal links<small>Open scanned order numbers and portal URLs.</small></span><input type="checkbox" data-key="scannerOpenLinks" data-depends="scanner" disabled></label>
   <label class="row"><span>Send other scans to search<small>Requires universal search to be enabled.</small></span><input type="checkbox" data-key="scannerSearch" data-depends="scanner search" disabled></label>
+  </div>
+  <div class="settings-group"><h3>Purchase order receiving</h3>
   <label class="row"><span>Purchase order receiving<small>Send scans to the portal receiving workflow.</small></span><input type="checkbox" data-key="scannerReceiving" data-depends="scanner" disabled></label>
-  <label class="row"><span>Focus the OEM serial field<small>Automatically focus the Scan OEM Serial dialog while receiving.</small></span><input type="checkbox" data-key="scannerOEMFocus" data-depends="scanner scannerReceiving" disabled></label>
-  <label class="row"><span>Confirm valid OEM serials automatically<small>Click Confirm after the portal validates a scanned serial. Turn off to review it first.</small></span><input type="checkbox" data-key="scannerOEMConfirm" data-depends="scanner scannerReceiving" disabled></label>
-  <button class="reset" type="button" data-reset="scanner" disabled>Reset barcode scanning settings</button>
+  <label class="row"><span>Focus the OEM serial field<small>Place the cursor in the serial field when the dialog opens.</small></span><input type="checkbox" data-key="scannerOEMFocus" data-depends="scanner scannerReceiving" disabled></label>
+  <label class="row"><span>Confirm valid OEM serials automatically<small>Turn off to review the serial before confirming.</small></span><input type="checkbox" data-key="scannerOEMConfirm" data-depends="scanner scannerReceiving" disabled></label>
+  </div>
+  <button class="reset" type="button" data-reset="scanner" disabled>Restore defaults</button>
 </section>
 <section id="columns" aria-labelledby="columns-title"><h2 id="columns-title" tabindex="-1">Table columns</h2>
-  <label class="row"><span>Enable custom columns<small>Save column layouts for each portal tab.</small></span><input type="checkbox" data-key="columns" data-depends="" disabled></label>
-  <label class="row"><span>Customize Workorders tables<small>Reorder, resize, hide, and add work order columns.</small></span><input type="checkbox" data-key="columnsWorkorders" data-depends="columns" disabled></label>
-  <label class="row"><span>Customize Arrivals tables<small>Reorder, resize, hide, and add arrival columns.</small></span><input type="checkbox" data-key="columnsArrivals" data-depends="columns" disabled></label><p class="hint">Open a Workorders or Arrivals table and choose <strong>Columns</strong> to manage that tab’s visible columns, order, widths, and saved layout. Reset that layout from the same Columns panel.</p>
-  <button class="reset" type="button" data-reset="columns" disabled>Reset table columns settings</button>
+  <label class="row"><span>Custom columns<small>Save column layouts for each portal tab.</small></span><input type="checkbox" data-key="columns" data-depends="" disabled></label>
+  <label class="row"><span>Workorders</span><input type="checkbox" data-key="columnsWorkorders" data-depends="columns" disabled></label>
+  <label class="row"><span>Arrivals</span><input type="checkbox" data-key="columnsArrivals" data-depends="columns" disabled></label><p class="hint">Choose <strong>Columns</strong> on a portal table to change its layout. Layouts are saved separately for each view.</p>
+  <button class="reset" type="button" data-reset="columns" disabled>Restore defaults</button>
 </section>
 <section id="support" aria-labelledby="support-title"><h2 id="support-title" tabindex="-1">Support chat</h2>
-  <label class="row"><span>Enable support window enhancements<small>Move, minimize, and pop out support chat while keeping the portal usable.</small></span><input type="checkbox" data-key="support" data-depends="" disabled></label>
-  <label class="row"><span>Desktop notifications<small>Notify when a support message arrives while chat is out of sight.</small></span><input type="checkbox" data-key="supportDesktopNotifications" data-depends="support" disabled></label>
-  <label class="row"><span>Unread message badges<small>Show unread counts on the support launcher and extension icon.</small></span><input type="checkbox" data-key="supportUnreadBadge" data-depends="support" disabled></label>
-  <label class="row"><span>Show message text in notifications<small>Turn off for a generic new-message notification.</small></span><input type="checkbox" data-key="supportMessagePreview" data-depends="support supportDesktopNotifications" disabled></label>
-  <button class="reset" type="button" data-reset="support" disabled>Reset support chat settings</button>
+  <label class="row"><span>Movable support chat<small>Move or minimize chat without blocking the portal.</small></span><input type="checkbox" data-key="support" data-depends="" disabled></label>
+  <label class="row"><span>Desktop notifications<small>For messages received while chat is hidden.</small></span><input type="checkbox" data-key="supportDesktopNotifications" data-depends="support" disabled></label>
+  <label class="row"><span>Unread counts<small>On the support button and extension icon.</small></span><input type="checkbox" data-key="supportUnreadBadge" data-depends="support" disabled></label>
+  <label class="row"><span>Message previews<small>Show reply text in desktop notifications.</small></span><input type="checkbox" data-key="supportMessagePreview" data-depends="support supportDesktopNotifications" disabled></label>
+  <button class="reset" type="button" data-reset="support" disabled>Restore defaults</button>
 </section>
 <section id="updates" aria-labelledby="updates-title">
   <h2 id="updates-title" tabindex="-1">Updates &amp; help</h2>
   <p>Keep the extension in the same folder to retain your settings and column layouts.</p>
-  <div class="help-card"><h3>Installed with Git?</h3><p>Run <code>npm run update</code> in your checkout, or <code>git pull --ff-only</code>.</p></div>
-  <div class="help-card"><h3>Installed from a ZIP?</h3><p>Download the newer files and replace the contents of the folder you originally loaded.</p></div>
+  <div class="help-card"><h3>Git installation</h3><p>Run <code>npm run update</code> in your checkout, or <code>git pull --ff-only</code>.</p></div>
+  <div class="help-card"><h3>ZIP installation</h3><p>Download the newer files and replace the contents of the folder you originally loaded.</p></div>
   <p>After updating, reload the extension below, then refresh your portal tabs when your work is saved. Unpacked extensions do not update automatically.</p>
   <button id="reload-extension" type="button" disabled>Reload extension</button>
   <p id="preview-note" hidden>This is a preview. Open settings from Chrome’s extension toolbar to change your installed extension.</p>
@@ -94,17 +152,17 @@ footer{display:block;padding:8px 16px 12px;flex-shrink:0;background:Canvas}
     <a data-external href="https://github.com/dotjarden/Ubif-nextgen-plus/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Read changelog ↗</a>
     <a data-external href="https://github.com/dotjarden/Ubif-nextgen-plus#update" target="_blank" rel="noopener noreferrer">Update guide ↗</a>
   </div>
-</section><p id="no-results" hidden>No settings found. Try “scan”, “notification”, or “columns”.</p></main></div>
+</section><p id="no-results" hidden>No matching settings.</p></main></div>
 <footer>
   <p id="ubif-status" role="status" aria-live="polite"></p>
   <div class="footer-actions">
     <a class="footer-button request-button" data-external href="https://github.com/dotjarden/Ubif-nextgen-plus/issues" target="_blank" rel="noopener noreferrer" aria-label="Feature request — opens GitHub in a new tab">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 4V6a2 2 0 0 1 2-2Z"/><path d="M8 9h8M8 13h5"/></svg>
-      <span>Feature request<small>Help shape what’s next</small></span><span class="external-arrow" aria-hidden="true">↗</span>
+      <span>Feature request</span>
     </a>
     <a class="footer-button coffee-button" data-external href="https://www.buymeacoffee.com/jarden" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee — opens in a new tab">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8ZM17 9h2a3 3 0 0 1 0 6h-2M7 3v2M11 2v3M15 3v2M3 23h15"/></svg>
-      <span>Buy me a coffee<small>Support development</small></span><span class="external-arrow" aria-hidden="true">↗</span>
+      <span>Buy me a coffee</span>
     </a>
   </div>
 </footer>
