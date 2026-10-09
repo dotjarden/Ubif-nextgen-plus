@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const pageScript = fs.readFileSync(`${__dirname}/../extension/page.js`, 'utf8');
 const workorders = [{ workorderId: 301, workorderStatusName: 'Ready for work' }];
 
-function boot({ useXhr = false } = {}) {
+function boot({ useXhr = false, payload = { workOrders: workorders } } = {}) {
   const dom = new JSDOM('<!doctype html><body></body>', { url: 'https://portal.ubreakifix.net/repair/workorders', runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
   const seen = [];
@@ -15,7 +15,7 @@ function boot({ useXhr = false } = {}) {
     w.__fetchCalls.push({ url: String(input), method: (init && init.method) || 'GET', body: init && init.body });
     return Promise.resolve({
       ok: true,
-      clone: () => ({ json: async () => ({ workOrders: workorders }) })
+      clone: () => ({ json: async () => payload })
     });
   };
   if (useXhr) {
@@ -86,6 +86,41 @@ test('universal search requests do not contaminate the workorder column feed', a
 test('board pagination does not replace the native table feed', async t => {
   const { dom, w, seen } = boot(); t.after(() => dom.window.close());
   await w.fetch('/api/workorders', { method: 'POST', body: '{"page":2}', ubifPlusBoard: true });
+  await flush(w);
+  assert.deepEqual(seen, []);
+});
+
+const arrivals = [{ arrivalId: 500661184, customer: { fullName: 'Alajah Price' } }];
+
+test('the upcoming-arrivals response reaches the content script with its URL', async t => {
+  const { dom, w, seen } = boot({ payload: { data: arrivals, rowCount: 1 } }); t.after(() => dom.window.close());
+  await w.fetch('/api/arrivals/upcoming-arrivals?page=1');
+  await flush(w);
+  assert.deepEqual(seen.map(m => m.type), ['arrivals-url', 'arrivals'], 'the URL is known before the records arrive');
+  assert.equal(seen[0].url, '/api/arrivals/upcoming-arrivals?page=1');
+  assert.deepEqual(seen[1].records, arrivals);
+  assert.equal(seen[1].url, '/api/arrivals/upcoming-arrivals?page=1');
+});
+
+test('the XHR arrivals path forwards the URL and then the records', async t => {
+  const { dom, w, seen } = boot({ useXhr: true }); t.after(() => dom.window.close());
+  const xhr = new w.XMLHttpRequest();
+  xhr.open('GET', '/api/arrivals/upcoming-arrivals?page=1');
+  xhr.send();
+  await flush(w);
+  assert.deepEqual(seen.map(m => m.type), ['arrivals-url']);
+  xhr.finish(JSON.stringify({ data: arrivals }));
+  await flush(w);
+  assert.deepEqual(seen.map(m => m.type), ['arrivals-url', 'arrivals']);
+  assert.equal(seen[1].url, '/api/arrivals/upcoming-arrivals?page=1');
+  // The records were parsed inside the page, so compare them across realms by shape.
+  assert.equal(JSON.stringify(seen[1].records), JSON.stringify(arrivals));
+});
+
+test('other arrivals endpoints and non-GET calls stay out of the feed', async t => {
+  const { dom, w, seen } = boot({ payload: { data: arrivals } }); t.after(() => dom.window.close());
+  await w.fetch('/api/arrivals/some-other-report?page=1');
+  await w.fetch('/api/arrivals/upcoming-arrivals?page=2', { method: 'POST' });
   await flush(w);
   assert.deepEqual(seen, []);
 });

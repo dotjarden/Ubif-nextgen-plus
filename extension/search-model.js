@@ -4,13 +4,18 @@
   const categories = ['Customers', 'Work orders', 'Items', 'Claims', 'Serial numbers'];
   const defaults = { isCrossStoreSearch: true, order: 'createdDate,DESC', includeCounts: false };
   const enc = encodeURIComponent;
-  function plan(value) {
+  function plan(value, minChars = 3) {
     const q = value.trim();
     const get = (category, path, kind) => ({ category, path: `/api/${path}`, kind });
     const wo = (category, filter) => ({ category, path: '/api/workorders', body: { ...filter, ...defaults }, kind: 'workorders' });
-    if (q.length < 3 || q.length > 200) return [];
+    // The configured floor only raises the shared minimum; work orders and
+    // claims keep their own larger portal minimums below.
+    const minimum = Math.max(3, Math.round(Number(minChars) || 3));
+    if (q.length < minimum || q.length > 200) return [];
     const requests = [get('Customers', `customers?searchTerm=${enc(q)}`, 'customers'), get('Items', `repair/available-parts?searchTerm=${enc(q)}`, 'items')];
-    if (/^\d{5,}$/.test(q) && Number.isSafeInteger(Number(q))) requests.push(wo('Work orders', { workorderId: Number(q) }));
+    // Work orders only accept their own 5-10 digit ids; longer numbers are
+    // barcodes (UPC/IMEI) that the item and customer searches already cover.
+    if (/^\d{5,10}$/.test(q) && Number.isSafeInteger(Number(q))) requests.push(wo('Work orders', { workorderId: Number(q) }));
     if (q.length >= 6) {
       requests.push(wo('Claims', { claimNumber: q }));
       requests.push(get('Claims', `arrivals/upcoming-arrivals?claimNumber=${enc(q)}&isCrossStoreSearch=true`, 'arrivals'));

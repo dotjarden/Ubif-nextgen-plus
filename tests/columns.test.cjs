@@ -4,7 +4,7 @@ const { JSDOM } = require('jsdom');
 const fs = require('node:fs');
 const scripts = ['model.js', 'content.js'].map(f => fs.readFileSync(`${__dirname}/../extension/${f}`, 'utf8'));
 (0, eval)(scripts[0]);
-const { COLUMNS, PRESETS, LAYOUT_VERSION, GROUPS } = globalThis.UBIFPlusModel;
+const { COLUMNS, ARRIVAL_COLUMNS, PRESETS, ARRIVAL_PRESETS, LAYOUT_VERSION, GROUPS } = globalThis.UBIFPlusModel;
 const columns = [ ['nextUpdate','Next update'], ['createdDate','Created'], ['customerName','Customer'], ['deviceCatalogName','Device/Issue'], ['status','Status'], ['woProgram','Program'], ['location','Location'], ['woId','WO #'] ];
 // Columns the table does not render: they stay opt-in, so they are hidden by default.
 const dataIds = COLUMNS.filter(c => !columns.some(([portalId]) => c.portalIds.includes(portalId))).map(c => c.id);
@@ -204,25 +204,35 @@ test('Columns is a sibling of dropdown wrappers, with no layout shift on save', 
   assert.equal(ui.querySelector('.save').hasAttribute('data-error'),false);
 });
 
-const arrivalsColumns = [['customer','Customer'],['device','Device'],['programType','Program type'],['appointment','Appointment'],['arrivalStatus','Arrival Status']];
-test('Arrivals uses its actual columns, owns an independent layout, and survives page switches', async t => {
+const arrivalsTable = [['customer','Customer'],['device','Device'],['source','Program type'],['appointment','Appointment'],['arrivalType','Arrival type']];
+// Portal columns first (they are the ones the table renders), then the data columns.
+const arrivalLabels = ['Program type','Appointment','Arrival status','Arrival #','Client','Created','Updated','Missed arrival','Notes','Customer','Phone','Email','Contact prefs','Customer ID','City','Device','Issues','Arrival type'];
+const arrivalNative = ['customer','device','source','appointment'];
+const arrivalOptIn = ARRIVAL_COLUMNS.filter(c => !arrivalNative.includes(c.id)).map(c => c.id);
+test('Arrivals uses the portal column ids, its own groups and an independent layout', async t => {
   const s = await setup(); t.after(() => (s.w.dispatchEvent(new s.w.Event('pagehide')), s.dom.window.close()));
   const workOrderLayout = { order:['woId'], hidden:['created'], widths:{woId:300} };
   s.changed({'ubif-plus.columns.v1.All':{newValue:workOrderLayout}}); await s.tick();
   s.w.history.pushState({},'', '/check-in/arrivals');
-  s.w.document.querySelector('main').innerHTML = '<div><button id="add">Add new</button></div>' + table(arrivalsColumns);
+  s.w.document.querySelector('main').innerHTML = '<div><button id="add">Add new</button></div>' + table(arrivalsTable);
   await s.tick();
   const ui = s.shadow(); assert.ok(ui); assert.equal(s.w.document.querySelector('#add').nextElementSibling.id,'ubif-plus-columns');
   const open = openColumns(s);
-  assert.equal(open.querySelectorAll('.row').length,5);
-  assert.deepEqual(names(open),arrivalsColumns.map(c=>c[1]));
-  assert.equal(open.querySelector('.group'), null, 'no workorder groups on Arrivals');
-  toggled(open, 'programType').click(); await s.tick();
-  assert.deepEqual([...s.data['ubif-plus.columns.v1.arrivals.Arrivals'].hidden],['programType']);
-  assert.match(s.shadow().querySelector('.summary').textContent,/Arrivals · 4 of 5/);
+  assert.equal(open.querySelectorAll('.row').length, ARRIVAL_COLUMNS.length + 1, 'arrival catalog plus a portal column it does not know');
+  assert.deepEqual([...open.querySelectorAll('.group')].map(g => g.textContent), ['Arrival (9)','Customer (6)','Device (2)','Table (1)']);
+  assert.deepEqual(names(open), arrivalLabels);
+  assert.deepEqual([...open.querySelectorAll('.preset')].map(b => b.textContent), ARRIVAL_PRESETS.map(p => p.label));
+  assert.equal(button(open, 'Apply to all tabs'), undefined, 'Arrivals is a single view, not a tab set');
+  assert.equal(toggled(open, 'source').closest('.row').querySelector('.tag').textContent, 'table', 'the portal renders Program type itself');
+  assert.equal(toggled(open, 'phone').closest('.row').querySelector('.tag'), null, 'Phone is a data column');
+  assert.match(s.shadow().querySelector('.summary').textContent, /Arrivals · 5 of 18/);
+  toggled(open, 'source').click(); await s.tick();
+  assert.deepEqual([...s.data['ubif-plus.columns.v1.arrivals.Arrivals'].hidden].sort(), [...arrivalOptIn, 'source'].sort());
+  assert.match(s.shadow().querySelector('.summary').textContent, /Arrivals · 4 of 18/);
   s.w.history.pushState({},'', '/repair/workorders?tab=All');
   s.w.document.querySelector('main').innerHTML = table(); await s.tick();
   assert.match(s.shadow().querySelector('.summary').textContent, new RegExp(`All · 7 of ${COLUMNS.length}`));
+  assert.ok(button(openColumns(s), 'Apply to all tabs'), 'Workorders keeps the tab copy');
   assert.equal(s.data['ubif-plus.columns.v1.All'].widths.woId,300);
 });
 

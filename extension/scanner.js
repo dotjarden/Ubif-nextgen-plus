@@ -6,6 +6,8 @@
   // Keyboard-wedge scanners send a rapid burst followed by Enter or Tab.
   // Timing is deliberately conservative so normal typing keeps its native behavior.
   const MAX_GAP = 80, MAX_AVERAGE = 40, MAX_LENGTH = 200;
+  const S = globalThis.UBIFPlusSettings;
+  let enabled = true;
   let buffer = '', started = 0, last = 0, target = null, original = null, route = '';
   function reset() { buffer = ''; started = last = 0; target = original = null; route = ''; }
   function receiving() {
@@ -19,6 +21,7 @@
       dialog.getAttribute('aria-label') === 'Scan OEM Serial') || null;
   }
   function syncOEM() {
+    if (!enabled) return;
     const dialog = oemDialog();
     const input = dialog?.querySelector('input[type="text"]:not(:disabled)');
     if (input !== focusedOEM) {
@@ -39,16 +42,41 @@
     attributeFilter: ['role', 'aria-label', 'aria-hidden', 'hidden', 'open', 'disabled', 'aria-disabled', 'value']
   });
   syncOEM();
+  function looksLikeUrl(value) {
+    return /^https?:\/\//i.test(value) || /^portal\.ubreakifix\.net\//i.test(value) || value.startsWith('/');
+  }
   function destination(value) {
     // Longer bare numbers may be phone numbers or IMEIs, not work orders.
     if (/^[1-9]\d{4,9}$/.test(value)) return `/repair/workorder/${value}`;
+    // Anything else that is not a portal URL is a scan the search panel wants.
+    if (!looksLikeUrl(value)) return null;
     let url;
     try {
       url = new URL(value.startsWith('portal.ubreakifix.net/') ? `https://${value}` : value, 'https://portal.ubreakifix.net');
     } catch { return null; }
     if (url.origin !== 'https://portal.ubreakifix.net' || url.username || url.password) return null;
     const match = url.pathname.match(/^\/repair\/workorder\/([1-9]\d{4,14})\/?$/);
-    return match ? `/repair/workorder/${match[1]}` : null;
+    if (match) return `/repair/workorder/${match[1]}`;
+    // A portal QR for any other route (an item, a purchase order, a customer)
+    // still opens that route instead of being dropped.
+    return url.pathname === '/' ? null : `${url.pathname}${url.search}${url.hash}`;
+  }
+  /* Values that are neither work orders nor portal links are sent to the
+     universal search field: item barcodes, IMEIs, serial numbers, phone
+     numbers, claim references and names. Anything that reads like prose or an
+     address is left alone so it keeps its normal behavior. */
+  function searchTarget(value) {
+    const query = value.trim();
+    if (query.length < 3 || query.length > MAX_LENGTH) return null;
+    if (looksLikeUrl(value)) return null;
+    if (!/[0-9A-Za-z]/.test(query)) return null;
+    if ((query.match(/\s/g) || []).length > 2) return null;
+    return query;
+  }
+  function toSearch(query) {
+    const ui = globalThis.UBIFPlusSearchUI;
+    // Absent or switched off: the portal keeps the keystrokes as they were.
+    return Boolean(ui && typeof ui.run === 'function' && ui.run(query));
   }
   function snapshot(node) {
     if (!(node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement)) return null;
@@ -63,7 +91,7 @@
     target.dispatchEvent(new Event('input', { bubbles: true }));
   }
   window.addEventListener('keydown', event => {
-    if (event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) { reset(); return; }
+    if (!enabled || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) { reset(); return; }
     const isReceiving = receiving();
     const oem = oemDialog();
     // A new interaction cancels any delayed confirmation from a previous scan.
@@ -78,7 +106,9 @@
     if (event.key === 'Enter' || event.key === 'Tab') {
       const rapid = buffer.length >= (isReceiving ? 4 : 5) && (now - started) / buffer.length <= MAX_AVERAGE;
       const href = !isReceiving && rapid ? destination(buffer) : null;
-      if (href || (isReceiving && rapid)) {
+      const query = !isReceiving && rapid && !href ? searchTarget(buffer) : null;
+      const searched = Boolean(query) && toSearch(query);
+      if (href || searched || (isReceiving && rapid)) {
         event.preventDefault();
         event.stopImmediatePropagation();
         const scan = buffer;
@@ -96,7 +126,8 @@
             window.setTimeout(() => { if (pendingOEM === pending) pendingOEM = null; }, 1000);
           }
         }
-        else window.location.assign(href);
+        else if (href) window.location.assign(href);
+        // Otherwise the universal search field already holds the query.
       } else reset();
       return;
     }
@@ -112,4 +143,14 @@
   window.addEventListener('pagehide', () => { pendingOEM = null; reset(); });
   window.addEventListener('popstate', () => { pendingOEM = null; reset(); syncOEM(); });
   document.addEventListener('pointerdown', () => { pendingOEM = null; reset(); }, true);
+  // The toggle is applied as soon as storage answers; the default keeps scans
+  // working before it does.
+  if (S) {
+    const apply = settings => {
+      enabled = settings.scanner !== false;
+      if (!enabled) { pendingOEM = null; reset(); }
+    };
+    S.get().then(apply, () => {});
+    S.subscribe(apply);
+  }
 })();

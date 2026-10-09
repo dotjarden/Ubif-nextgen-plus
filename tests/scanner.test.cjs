@@ -212,3 +212,49 @@ test('OEM scans cannot confirm while the portal keeps Confirm disabled', async t
   assert.equal(modal.confirmed, 0);
   assert.equal(modal.dialog.isConnected, true);
 });
+
+/* Universal search: anything that is neither a work order nor a portal link
+   becomes a query for the search field instead of being dropped. */
+function withSearch(b) {
+  const queries = [];
+  b.context.UBIFPlusSearchUI = { run: value => { queries.push(value); return true; } };
+  return queries;
+}
+test('a non-work-order scan hands its query to universal search and never navigates', t => {
+  const b = boot(t), queries = withSearch(b);
+  assert.equal(b.scan('4902567890123').defaultPrevented, true, 'the terminator is consumed so the panel stays open');
+  b.scan('SN-8842-A');
+  b.scan('Jane Smith');
+  assert.deepEqual(queries, ['4902567890123', 'SN-8842-A', 'Jane Smith']);
+  assert.deepEqual(b.navigations, [], 'a barcode never navigates');
+  assert.equal(b.scan('30787644').defaultPrevented, true, 'work orders still navigate');
+  assert.deepEqual(queries, ['4902567890123', 'SN-8842-A', 'Jane Smith'], 'a work order never reaches search');
+  assert.deepEqual(b.navigations, ['/repair/workorder/30787644']);
+});
+test('prose and short values are left to the portal, never to search', t => {
+  const b = boot(t), queries = withSearch(b);
+  for (const value of ['the quick brown fox', 'a b c d', '1234', 'https://evil.example/x', '   ']) {
+    assert.equal(b.scan(value).defaultPrevented, false, value);
+  }
+  assert.deepEqual(queries, []);
+  assert.deepEqual(b.navigations, []);
+});
+test('a portal QR for any other route opens that route instead of becoming a query', t => {
+  const b = boot(t), queries = withSearch(b);
+  b.scan('/check-in/arrivals');
+  b.scan('https://portal.ubreakifix.net/boh/inventory/purchase-orders/UBFPO000100345');
+  b.scan('portal.ubreakifix.net/repair/workorders?tab=Waiting');
+  assert.deepEqual(b.navigations, [
+    '/check-in/arrivals',
+    '/boh/inventory/purchase-orders/UBFPO000100345',
+    '/repair/workorders?tab=Waiting'
+  ]);
+  assert.deepEqual(queries, []);
+});
+test('without a working search field the portal keeps the keystrokes', t => {
+  const b = boot(t);
+  assert.equal(b.scan('4902567890123').defaultPrevented, false, 'no search UI is installed');
+  b.context.UBIFPlusSearchUI = { run: () => false };
+  assert.equal(b.scan('4902567890123').defaultPrevented, false, 'search refused the query');
+  assert.deepEqual(b.navigations, []);
+});

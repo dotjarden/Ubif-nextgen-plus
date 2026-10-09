@@ -2,7 +2,7 @@
   'use strict';
   if (globalThis.__ubifPlusStarted) return;
   globalThis.__ubifPlusStarted = true;
-  const { normalize, COLUMNS, GROUPS, PRESETS, applyPreset, LAYOUT_VERSION } = globalThis.UBIFPlusModel;
+  const { normalize, columnsFor, groupsFor, presetsFor, applyPreset, LAYOUT_VERSION } = globalThis.UBIFPlusModel;
   const PREFIX = 'ubif-plus.columns.v1.';
   const owner = `${Date.now()}-${Math.random()}`;
   document.documentElement.dataset.ubifPlusOwner = owner;
@@ -11,9 +11,15 @@
   document.querySelectorAll('#ubif-plus-columns, #ubif-plus-table-style, [data-ubif-handle], [data-ubif-extra]').forEach(el => el.remove());
   document.querySelectorAll('table[data-ubif-plus]').forEach(table => table.removeAttribute('data-ubif-plus'));
   let profiles = {}, ready = false, storageError = false, current = null, pending = false, suspended = false;
+  const S = globalThis.UBIFPlusSettings;
+  let columnsEnabled = true;
   let writeQueue = Promise.resolve();
   // Records arrive from the portal's own /api/workorders responses (see page.js).
-  const feed = { records: new Map(), requestBody: null, version: 0, fetching: false, tried: false, lastTab: null };
+  const feed = {
+    records: new Map(), requestBody: null, version: 0, fetching: false, tried: false, lastTab: null,
+    // The portal's arrivals list: one record per arrival, replaced on page 1.
+    arrivals: new Map(), arrivalsUrl: null, arrivalsFetching: false, arrivalsTried: false
+  };
   const style = document.createElement('style');
   style.id = 'ubif-plus-table-style';
   const element = (tag, text, attrs = {}) => {
@@ -61,10 +67,10 @@
      catalog column is offered as a data column filled from the workorder feed,
      so a portal default like Status or Device/Issue is selectable on any tab. */
   function catalogFor(found, kind) {
-    const workorders = kind === 'workorders';
+    const definitions = columnsFor(kind);
     const byPortalId = new Map();
     const byId = new Map();
-    if (workorders) for (const entry of COLUMNS) {
+    for (const entry of definitions) {
       byId.set(entry.id, entry);
       for (const portalId of entry.portalIds) if (!byPortalId.has(portalId)) byPortalId.set(portalId, entry);
     }
@@ -83,7 +89,7 @@
         display: () => ({ a: '', b: '' }), read: () => '', sortValue: () => ''
       });
     }
-    if (workorders) for (const entry of COLUMNS) if (!claimed.has(entry.id)) {
+    for (const entry of definitions) if (!claimed.has(entry.id)) {
       catalog.push({ ...entry, portalId: null, native: false, extra: true });
     }
     return catalog;
@@ -104,6 +110,7 @@
   function ownsPage() { return document.documentElement.dataset.ubifPlusOwner === owner; }
 
   function recordForRow(row) {
+    if (current && current.kind === 'arrivals') return (current.rowRecords && current.rowRecords.get(row)) || null;
     const anchor = row.querySelector('a[href*="/repair/workorder/"]');
     const match = anchor && /\/repair\/workorder\/(\d+)/.exec(anchor.getAttribute('href') || '');
     if (match) return feed.records.get(match[1]) || null;
@@ -113,6 +120,36 @@
       if (digits) return feed.records.get(digits) || null;
     }
     return null;
+  }
+  const textOf = value => (value === null || value === undefined ? '' : String(value));
+  const lower = value => textOf(value).trim().toLowerCase();
+  /* Arrival rows are clickable divs with no id, so each row is matched to its
+     record by the customer name and email the portal renders itself, keeping
+     the portal's own response order for repeated customers. */
+  function mapArrivalRows(tbody) {
+    const queues = new Map(), byName = new Map();
+    for (const record of feed.arrivals.values()) {
+      const name = lower(record.customer?.fullName);
+      const key = `${name}|${lower(record.customer?.primaryEmail)}`;
+      let queue = queues.get(key);
+      if (!queue) { queue = []; queues.set(key, queue); }
+      queue.push(record);
+      if (!byName.has(name)) byName.set(name, []);
+      byName.get(name).push(queue);
+    }
+    const map = new Map();
+    for (const row of tbody.rows) {
+      const cell = row.cells[0];
+      // innerText keeps the portal's line breaks, so an email is never glued to
+      // the name or the phone number the way concatenated textContent is.
+      const rendered = cell ? (cell.innerText || cell.textContent || '') : '';
+      const name = lower(cell?.querySelector('h3')?.textContent || rendered.split(/\r?\n/).find(line => line.trim()) || '');
+      const email = lower((rendered.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [''])[0]);
+      let queue = queues.get(`${name}|${email}`);
+      if (!queue || !queue.length) queue = (byName.get(name) || []).find(candidate => candidate.length);
+      map.set(row, queue && queue.length ? queue.shift() : null);
+    }
+    return map;
   }
   function cellMarkup(col, record) {
     if (!record) return '<div class="ubif-x"><span class="ubif-x1 ubif-x-none">—</span></div>';
@@ -141,6 +178,7 @@
     park(head, [...head.cells]);
     const tbody = table.tBodies[0];
     if (!tbody) return;
+    if (current.kind === 'arrivals') current.rowRecords = mapArrivalRows(tbody);
     for (const row of tbody.rows) {
       const cells = [...row.cells];
       const portalCells = cells.filter(c => !c.dataset.ubifExtra);
@@ -151,7 +189,7 @@
       for (const id of wanted) if (!cellFor(row, id)) row.append(makeTd(id));
       park(row, [...row.cells]);
       const record = recordForRow(row);
-      const stamp = `${record ? record.workorderId : ''}:${version}`;
+      const stamp = `${record ? (record.workorderId ?? record.arrivalId ?? '') : ''}:${version}`;
       for (const id of wanted) {
         const td = cellFor(row, id);
         if (td && td.dataset.ubifStamp !== stamp) {
@@ -219,12 +257,24 @@
     const widthOf = id => layout.widths[id]
       || catalog.find(c => c.id === id)?.width
       || (id === 'deviceIssue' ? 240 : 140);
-    const minWidth = visible.reduce((sum, id) => sum + widthOf(id), 0);
-    const template = visible.map(id => layout.widths[id] ? `${layout.widths[id]}px` : `minmax(${widthOf(id)}px, 1fr)`).join(' ');
+    // Unsized columns can give up to a quarter of their default width before
+    // the row starts scrolling, so a layout that barely exceeds the portal's
+    // content width (five columns in a narrow pane) fits instead of showing a
+    // scrollbar for a few pixels.
+    const floorOf = id => (layout.widths[id] ? layout.widths[id] : Math.round(widthOf(id) * 0.75));
+    const minWidth = visible.reduce((sum, id) => sum + floorOf(id), 0);
+    // Unsized columns share the remaining space in proportion to their default
+    // width, so a 2-column Arrivals table keeps the portal's own column balance
+    // instead of splitting the row down the middle.
+    const template = visible.map(id => layout.widths[id]
+      ? `${layout.widths[id]}px`
+      : `minmax(${floorOf(id)}px, ${widthOf(id)}fr)`).join(' ');
     const root = 'table[data-ubif-plus]';
     syncCells();
     // CSS placement keeps React-owned cells and their original event handlers intact.
-    let css = `${root}{display:block!important;overflow-x:auto!important;width:100%!important;}
+    // min-width:0 beats the portal's `min-width:max-content`, which would otherwise
+    // stretch every column to its longest cell and push columns off-screen.
+    let css = `${root}{display:block!important;overflow-x:auto!important;width:100%!important;min-width:0!important;max-width:100%!important;}
       ${root}>thead,${root}>tfoot{display:block!important;min-width:100%;width:max(100%, ${minWidth}px);}
       ${root}>tbody{display:flex!important;flex-direction:column!important;min-width:100%;width:max(100%, ${minWidth}px);}
       ${root}>*>tr{display:grid!important;grid-template-columns:${template}!important;min-width:100%;}
@@ -259,12 +309,14 @@
       }
     });
     if (current.kind === 'arrivals') {
-      // Flex rows must not shrink to fit the portal's scrolling body. Preserve
-      // avatar/icon dimensions instead of applying workorder wrapper overrides.
-      css += `${root}>tbody>tr{flex:0 0 auto!important;height:auto!important;min-height:104px;align-items:center;}
-        ${root}>tbody>tr>td{height:auto!important;max-height:none!important;min-height:0!important;padding-top:16px!important;padding-bottom:16px!important;white-space:normal;overflow-wrap:anywhere;}
-        ${root}>thead>tr{align-items:center;min-height:48px;}
-        ${root}>thead>tr>th{align-self:center;}
+      // The portal pins arrivals rows to a fixed height with clipping; content
+      // cells (customer with name, email and phone) size past it, so let the row
+      // grow to its content instead of cutting the last line off, and let cells
+      // stretch so backgrounds and separators line up across the row.
+      css += `${root}>tbody>tr{flex:0 0 auto!important;height:auto!important;max-height:none!important;min-height:0!important;align-items:stretch;}
+        ${root}>tbody>tr>td{height:auto!important;max-height:none!important;min-height:0!important;padding-top:12px!important;padding-bottom:12px!important;white-space:normal;overflow-wrap:anywhere;}
+        ${root}>thead>tr{align-items:stretch;min-height:52px;max-height:none!important;}
+        ${root}>thead>tr>th{align-self:stretch;}
         [data-ubif-arrivals-toolbar]{display:flex!important;align-items:center;gap:12px!important;flex-wrap:wrap;}
         [data-ubif-arrivals-toolbar]>button{margin-left:auto!important;}
         [data-ubif-arrivals-toolbar]>#ubif-plus-columns{margin-left:0!important;}
@@ -523,8 +575,11 @@
     head.append(element('h2', 'Columns', { id: 'columns-title' }));
     const close = element('button', '×', { type: 'button', class: 'close', 'aria-label': 'Close column settings' });
     head.append(close);
+    const multiTab = kind === 'workorders';
     header.append(head, element('p', grouped
-      ? `Show or hide columns for ${tab}. Changes apply immediately; each tab keeps its own layout.`
+      ? (multiTab
+        ? `Show or hide columns for ${tab}. Changes apply immediately; each tab keeps its own layout.`
+        : `Show or hide columns for ${tab}. Changes apply immediately.`)
       : `Show columns in ${tab}.`));
     const search = element('input', null, { type: 'search', class: 'search', placeholder: 'Search columns', 'aria-label': 'Search columns' });
     const presets = element('div', null, { class: 'presets', role: 'group', 'aria-label': 'Column presets' });
@@ -538,7 +593,9 @@
     const reset = element('button', 'Reset layout', { type: 'button' });
     const showAll = element('button', 'Show all', { type: 'button' });
     const applyAll = element('button', 'Apply to all tabs', { type: 'button' });
-    utility.append(reset, showAll, applyAll);
+    utility.append(reset, showAll);
+    // Arrivals is a single view: copying a layout to "other tabs" would be a lie.
+    if (multiTab) utility.append(applyAll);
     const actions = element('div', null, { class: 'actions' });
     const done = element('button', 'Done', { type: 'button', class: 'primary' });
     actions.append(done);
@@ -548,7 +605,7 @@
     footActions.append(utility, actions);
     footer.append(
       element('p', grouped
-        ? '“table” columns come from the page itself; the rest are filled in from workorder data. Drag a header handle to reorder or resize.'
+        ? `“table” columns come from the page itself; the rest are filled in from ${kind === 'arrivals' ? 'arrival' : 'workorder'} data. Drag a header handle to reorder or resize.`
         : 'Drag a header handle to reorder or resize.', { class: 'hint' }),
       footTop, footActions
     );
@@ -605,7 +662,7 @@
       list.replaceChildren();
       const query = search.value.trim().toLowerCase();
       let shown = 0;
-      for (const group of GROUPS) {
+      for (const group of groupsFor(current.kind)) {
         const ids = current.layout.order.filter(id => {
           const col = byId(id);
           return col && col.group === group && (!query || col.label.toLowerCase().includes(query));
@@ -676,7 +733,7 @@
     };
     function syncPresets() {
       for (const button of presets.children) {
-        const preset = PRESETS.find(p => p.id === button.dataset.preset);
+        const preset = presetsFor(current.kind).find(p => p.id === button.dataset.preset);
         button.setAttribute('aria-pressed', String(preset && presetMatches(preset)));
       }
     }
@@ -684,11 +741,11 @@
     close.addEventListener('click', () => dialog.close());
     done.addEventListener('click', () => dialog.close());
     search.addEventListener('input', () => { list.scrollTop = 0; render(); });
-    for (const preset of PRESETS) {
+    for (const preset of presetsFor(current.kind)) {
       const button = element('button', preset.label, { type: 'button', class: 'preset' });
       button.dataset.preset = preset.id;
       button.setAttribute('aria-pressed', 'false');
-      button.addEventListener('click', () => applyLayout(applyPreset(catalog, defaultHidden, preset.id, current.layout)));
+      button.addEventListener('click', () => applyLayout(applyPreset(catalog, defaultHidden, preset.id, current.layout, current.kind)));
       presets.append(button);
     }
     reset.addEventListener('click', () => applyLayout(normalize(catalog, null, defaultHidden)));
@@ -711,6 +768,24 @@
     }
     if (found) { feed.version++; schedule(); }
   }
+  /* The arrivals list is one response wide: page 1 replaces it so a filtered
+     or re-fetched view never keeps rows the portal has dropped; later pages
+     are appended the same way the portal appends them. */
+  function ingestArrivals(records, url) {
+    if (!Array.isArray(records)) return;
+    const page = Number((/[?&]page=(\d+)/.exec(url || '') || [])[1] || 1);
+    if (page <= 1) feed.arrivals.clear();
+    let found = 0;
+    for (const record of records) {
+      const id = record && record.arrivalId;
+      if (id !== undefined && id !== null) { feed.arrivals.set(String(id), record); found++; }
+    }
+    if (found) {
+      feed.arrivalsUrl = url || feed.arrivalsUrl;
+      feed.version++;
+      schedule();
+    }
+  }
   /* Fallback for the one case interception cannot cover: the portal's own
      response was missed, so repeat its last request once to fill the cells. */
   function ensureRecords() {
@@ -727,6 +802,16 @@
       .catch(() => {})
       .then(() => { feed.fetching = false; feed.tried = true; });
   }
+  /* Same fallback for arrivals: repeat the portal's last list request once. */
+  function ensureArrivals() {
+    if (feed.arrivals.size || !feed.arrivalsUrl || feed.arrivalsFetching || feed.arrivalsTried || typeof fetch !== 'function') return;
+    feed.arrivalsFetching = true;
+    fetch(feed.arrivalsUrl, { credentials: 'same-origin' })
+      .then(res => (res && res.ok ? res.json() : null))
+      .then(json => { if (json && Array.isArray(json.data)) ingestArrivals(json.data, feed.arrivalsUrl); })
+      .catch(() => {})
+      .then(() => { feed.arrivalsFetching = false; feed.arrivalsTried = true; });
+  }
   addEventListener('message', event => {
     const data = event.data;
     if (!data || data.source !== 'ubif-plus') return;
@@ -734,6 +819,13 @@
       if (typeof data.body === 'string') feed.requestBody = data.body;
     } else if (data.type === 'workorders') {
       ingest(data.records);
+    } else if (data.type === 'arrivals') {
+      ingestArrivals(data.records, data.url);
+    } else if (data.type === 'arrivals-url') {
+      if (typeof data.url === 'string' && data.url !== feed.arrivalsUrl) {
+        feed.arrivalsUrl = data.url;
+        feed.arrivalsTried = false;
+      }
     }
   });
 
@@ -744,7 +836,7 @@
     observer.disconnect();
     try {
       const kind = pageKind();
-      if (!ready || !kind || document.documentElement.hasAttribute('data-ubif-board-active')) { cleanup(); return; }
+      if (!ready || !columnsEnabled || !kind || document.documentElement.hasAttribute('data-ubif-board-active')) { cleanup(); return; }
       const found = discover();
       if (!found) { cleanup(); return; }
       const tab = tabName(kind);
@@ -755,6 +847,7 @@
       }
       apply();
       if (kind === 'workorders') ensureRecords();
+      if (kind === 'arrivals') ensureArrivals();
     } finally { observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['aria-selected', 'data-column-id'] }); }
   }
   function schedule() { if (suspended) return; if (!pending) { pending = true; requestAnimationFrame(refresh); } }
@@ -766,6 +859,12 @@
   addEventListener('pagehide', () => { suspended = true; observer.disconnect(); });
   addEventListener('pageshow', () => { suspended = false; schedule(); });
   chrome.storage.local.get(null).then(data => { profiles = data || {}; }, () => { storageError = true; }).finally(() => { ready = true; schedule(); });
+  // The toolbar popup toggles the column work without a reload.
+  if (S) {
+    const apply = settings => { columnsEnabled = settings.columns !== false; schedule(); };
+    S.get().then(apply, () => {});
+    S.subscribe(apply);
+  }
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     for (const [key, change] of Object.entries(changes)) if (key.startsWith(PREFIX)) {

@@ -37,4 +37,4 @@ function renderArrivals(){
 }
 document.querySelector('#show-workorders').onclick=()=>renderWorkorders();document.querySelector('#show-arrivals').onclick=renderArrivals;
 location.pathname.includes('/check-in/arrivals')?renderArrivals():renderWorkorders(new URL(location.href).searchParams.get('tab')||'All');
-</script><script src="/extension/scanner.js"></script><script src="/extension/model.js"></script><script src="/extension/content.js"></script><script>postFeed();</script></html>
+</script><script src="/extension/settings.js"></script><script src="/extension/scanner.js"></script><script src="/extension/model.js"></script><script src="/extension/content.js"></script><script>postFeed();</script><script src="/demo/board-fixtures.js"></script><script src="/extension/board-model.js"></script><script src="/extension/board.js"></script></html>

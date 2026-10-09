@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UBIF NextGen Plus settings</title>
+<style>
+  :root { color-scheme: light dark; --accent: #8224ce; --line: #e3dfe8; --soft: #64606b; --error: #b42318; }
+  @media (prefers-color-scheme: dark) { :root { --line: #3a3740; --soft: #a5a1ad; } }
+  * { box-sizing: border-box; }
+  body { width: 330px; margin: 0; font: 14px/1.45 system-ui, -apple-system, sans-serif; color: CanvasText; background: Canvas; }
+  header { display: flex; align-items: baseline; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  header strong { font-size: 15px; }
+  header span { margin-left: auto; font-size: 12px; color: var(--soft); }
+  main { padding: 4px 16px 8px; }
+  section { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  h2 { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--soft); }
+  .row { display: flex; align-items: center; gap: 12px; padding: 5px 0; cursor: pointer; }
+  .row > span { flex: 1; }
+  .row small { display: block; font-size: 12px; color: var(--soft); }
+  .row input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); flex: none; }
+  .row input[type=number] { width: 76px; padding: 5px 6px; font: inherit; color: inherit; background: Canvas; border: 1px solid var(--line); border-radius: 6px; }
+  .row input[type=checkbox]:disabled, .row input[type=number]:disabled { opacity: .5; }
+  #ubif-status { min-height: 20px; margin: 8px 0 0; font-size: 12px; color: var(--soft); }
+  #ubif-status[data-error=true] { color: var(--error); }
+  /* Sticks to the bottom of the popup while the sections scroll behind it,
+     and settles at the end of the page when nothing overflows. */
+  footer { position: sticky; bottom: 0; z-index: 1; display: flex; gap: 8px; padding: 10px 16px 14px; background: Canvas; border-top: 1px solid var(--line); }
+  footer a { flex: 1; text-align: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 20px; color: inherit; text-decoration: none; font-size: 13px; }
+  footer a:hover, footer a:focus-visible { border-color: var(--accent); }
+  footer a:last-child { background: var(--accent); border-color: transparent; color: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <strong>UBIF NextGen Plus</strong>
+  <span id="ubif-version"></span>
+</header>
+<main>
+  <section>
+    <h2>Features</h2>
+    <label class="row"><span>Universal search<small>Search customers, work orders, items, claims and serial numbers</small></span><input type="checkbox" data-key="search"></label>
+    <label class="row"><span>Update Today board<small>Due-today queue with portal notes and scheduling</small></span><input type="checkbox" data-key="board"></label>
+    <label class="row"><span>Barcode scanning<small>Scan a work order to open it; any other scan goes to universal search</small></span><input type="checkbox" data-key="scanner"></label>
+    <label class="row"><span>Custom columns<small>Reorder, resize and hide Workorders and Arrivals columns</small></span><input type="checkbox" data-key="columns"></label>
+    <label class="row"><span>Hide Home calendar<small>Hides the Arrivals schedule on the right of the Home page</small></span><input type="checkbox" data-key="hideHomeCalendar"></label>
+  </section>
+  <section>
+    <h2>Universal search</h2>
+    <label class="row"><span>Cmd/Ctrl + K focuses search</span><input type="checkbox" data-key="searchHotkey"></label>
+    <label class="row"><span>Delay before searching<small>Milliseconds after you stop typing</small></span><input type="number" data-key="searchDebounceMs" min="100" max="2000" step="50"></label>
+    <label class="row"><span>Minimum characters</span><input type="number" data-key="searchMinChars" min="3" max="10" step="1"></label>
+  </section>
+  <section>
+    <h2>Update Today board</h2>
+    <label class="row"><span>Refresh every<small>Seconds while the board is visible</small></span><input type="number" data-key="boardRefreshSec" min="15" max="600" step="15"></label>
+    <label class="row"><span>Include tomorrow by default</span><input type="checkbox" data-key="boardIncludeTomorrow"></label>
+  </section>
+  <p id="ubif-status" role="status" aria-live="polite"></p>
+</main>
+<footer>
+  <a href="https://github.com/dotjarden/Ubif-nextgen-plus/issues" target="_blank" rel="noopener noreferrer">Feature request</a>
+  <a href="https://www.buymeacoffee.com/jarden" target="_blank" rel="noopener noreferrer">Buy me a coffee</a>
+</footer>
+<script src="settings.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

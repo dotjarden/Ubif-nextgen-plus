@@ -46,6 +46,19 @@
   };
   const joined = v => (Array.isArray(v) ? v.filter(Boolean).join(', ') : text(v));
   const of = obj => obj || {};
+  const firstLine = v => text(v).split(/\r?\n/)[0].trim();
+  const appointmentLines = r => {
+    const value = text(r.appointment);
+    if (!value) return { a: 'Walk-in', b: '' };
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return { a: value, b: '' };
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - today) / 86400000);
+    const label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()}`;
+    const h24 = d.getHours();
+    return { a: label, b: `${h24 % 12 || 12}:${pad(d.getMinutes())}${h24 < 12 ? 'am' : 'pm'}` };
+  };
 
   const textColumn = (read, sub) => r => ({ a: text(read(r)), b: sub ? text(sub(r)) : '' });
   const dateColumn = key => r => dateLines(r[key]);
@@ -111,7 +124,56 @@
     { id: 'items', label: 'Items with device', group: 'Device', portalIds: [], width: 160,
       display: textColumn(r => r.itemswithdevice), read: r => r.itemswithdevice }
   ];
-  COLUMNS.forEach(col => {
+  /* The check-in app renders its arrivals table from its own five-column list
+     (customer, device, source, appointment, arrivalStatus) and drops the
+     lowest-priority ones on narrow screens. Those ids are matched exactly, so a
+     column the portal chose not to render still gets our cell. Everything else
+     is a data column filled from the portal's upcoming-arrivals response. */
+  const ARRIVAL_COLUMNS = [
+    // Arrival
+    { id: 'appointment', label: 'Appointment', group: 'Arrival', portalIds: ['appointment'], width: 175,
+      display: appointmentLines, read: r => r.appointment },
+    { id: 'arrivalStatus', label: 'Arrival status', group: 'Arrival', portalIds: ['arrivalStatus'], width: 175,
+      display: textColumn(r => of(r.arrivalStatus).arrivalStatusName), read: r => of(r.arrivalStatus).arrivalStatusName },
+    { id: 'source', label: 'Program type', group: 'Arrival', portalIds: ['source'], width: 180,
+      display: textColumn(r => of(r.program).name || r.source || ''), read: r => of(r.program).name || r.source },
+    { id: 'arrivalId', label: 'Arrival #', group: 'Arrival', portalIds: [], width: 130,
+      display: textColumn(r => r.arrivalId), read: r => r.arrivalId },
+    { id: 'client', label: 'Client', group: 'Arrival', portalIds: [], width: 170,
+      display: textColumn(r => r.clientName), read: r => r.clientName },
+    { id: 'created', label: 'Created', group: 'Arrival', portalIds: [], width: 155, date: true,
+      display: dateColumn('createdAt'), read: r => r.createdAt },
+    { id: 'updated', label: 'Updated', group: 'Arrival', portalIds: [], width: 155, date: true,
+      display: dateColumn('updatedAt'), read: r => r.updatedAt },
+    { id: 'missed', label: 'Missed arrival', group: 'Arrival', portalIds: [], width: 135,
+      display: r => ({ a: r.isMissed ? 'Yes' : '—', b: '' }), read: r => (r.isMissed ? 'Yes' : '') },
+    { id: 'notes', label: 'Notes', group: 'Arrival', portalIds: [], width: 210,
+      display: r => ({ a: firstLine((r.notes || []).map(n => n.noteText).join(' · ')), b: (r.notes || []).length ? `${r.notes.length} note${r.notes.length === 1 ? '' : 's'}` : '' }),
+      read: r => (r.notes || []).map(n => n.noteText).join(' ') },
+    // Customer
+    { id: 'customer', label: 'Customer', group: 'Customer', portalIds: ['customer'], width: 320,
+      display: r => ({ a: of(r.customer).fullName, b: of(r.customer).primaryEmail }),
+      read: r => of(r.customer).fullName },
+    { id: 'phone', label: 'Phone', group: 'Customer', portalIds: [], width: 175,
+      display: textColumn(r => formatPhone(of(r.customer).primaryPhone), r => contactFlags(r.customer)),
+      read: r => of(r.customer).primaryPhone },
+    { id: 'email', label: 'Email', group: 'Customer', portalIds: [], width: 230,
+      display: textColumn(r => of(r.customer).primaryEmail), read: r => of(r.customer).primaryEmail },
+    { id: 'contactPrefs', label: 'Contact prefs', group: 'Customer', portalIds: [], width: 155,
+      display: r => ({ a: contactFlags(r.customer), b: '' }), read: r => contactFlags(r.customer) },
+    { id: 'csuId', label: 'Customer ID', group: 'Customer', portalIds: [], width: 150,
+      display: textColumn(r => of(r.customer).csuCustomerId), read: r => of(r.customer).csuCustomerId },
+    { id: 'city', label: 'City', group: 'Customer', portalIds: [], width: 160,
+      display: r => ({ a: [of(r.customer).city, of(r.customer).state].filter(Boolean).join(', '), b: '' }),
+      read: r => of(r.customer).city },
+    // Device
+    { id: 'device', label: 'Device', group: 'Device', portalIds: ['device'], width: 230,
+      display: r => ({ a: text(of(r.customerDevice).deviceName), b: text(of(r.customerDevice).modelName) }),
+      read: r => of(r.customerDevice).deviceName },
+    { id: 'deviceIssues', label: 'Issues', group: 'Device', portalIds: [], width: 200,
+      display: textColumn(r => joined(r.deviceIssues)), read: r => joined(r.deviceIssues) }
+  ];
+  const withSortValues = list => list.forEach(col => {
     col.sortValue = record => {
       if (!record) return '';
       if (col.date) {
@@ -122,9 +184,17 @@
       return `${a} ${b}`.trim().toLowerCase();
     };
   });
+  withSortValues(COLUMNS);
+  withSortValues(ARRIVAL_COLUMNS);
 
-  /* 'Table' holds columns the portal renders that this catalog does not know,
-     and every column on pages without a workorder feed (Arrivals). */
+  /* 'Table' holds columns the portal renders that this catalog does not know.
+     Every page kind has its own groups, presets and logical columns. */
+  const ARRIVAL_PRESETS = [
+    { id: 'portal', label: 'Portal only', extras: [] },
+    { id: 'contact', label: 'Contact', extras: ['phone', 'email', 'contactPrefs', 'csuId', 'city'] },
+    { id: 'ops', label: 'Ops board', extras: ['arrivalId', 'arrivalStatus', 'source', 'device', 'deviceIssues', 'notes'] },
+    { id: 'all', label: 'Everything', extras: 'all' }
+  ];
   const GROUPS = ['Workorder', 'Program', 'Customer', 'Device', 'Table'];
   const PRESETS = [
     { id: 'portal', label: 'Portal only', extras: [] },
@@ -132,6 +202,11 @@
     { id: 'ops', label: 'Ops board', extras: ['status', 'location', 'total', 'lastUpdate', 'issues'] },
     { id: 'all', label: 'Everything', extras: 'all' }
   ];
+
+  const ARRIVAL_GROUPS = ['Arrival', 'Customer', 'Device', 'Table'];
+  const columnsFor = kind => (kind === 'arrivals' ? ARRIVAL_COLUMNS : COLUMNS);
+  const groupsFor = kind => (kind === 'arrivals' ? ARRIVAL_GROUPS : GROUPS);
+  const presetsFor = kind => (kind === 'arrivals' ? ARRIVAL_PRESETS : PRESETS);
 
   const clamp = v => Math.min(600, Math.max(100, Math.round(v)));
   const idsOf = columns => new Set(columns.map(c => c.id));
@@ -192,8 +267,9 @@
 
   /* Presets reset order and visibility but keep the widths already chosen.
      Columns the table renders itself are never hidden by a preset. */
-  const applyPreset = (columns, defaultHidden, presetId, previous) => {
-    const preset = PRESETS.find(p => p.id === presetId) || PRESETS[0];
+  const applyPreset = (columns, defaultHidden, presetId, previous, kind) => {
+    const list = presetsFor(kind);
+    const preset = list.find(p => p.id === presetId) || list[0];
     const extras = preset.extras === 'all' ? columns.filter(c => c.extra).map(c => c.id) : preset.extras;
     const hidden = columns
       .filter(c => c.extra && !extras.includes(c.id))
@@ -201,5 +277,8 @@
     return normalize(columns, { v: LAYOUT_VERSION, order: columns.map(c => c.id), hidden, widths: previous?.widths, sort: null }, defaultHidden);
   };
 
-  globalThis.UBIFPlusModel = { normalize, COLUMNS, GROUPS, PRESETS, LAYOUT_VERSION, applyPreset, logicalId, formatPhone, dateLines, money };
+  globalThis.UBIFPlusModel = {
+    normalize, COLUMNS, ARRIVAL_COLUMNS, GROUPS, ARRIVAL_GROUPS, PRESETS, ARRIVAL_PRESETS,
+    columnsFor, groupsFor, presetsFor, LAYOUT_VERSION, applyPreset, logicalId, formatPhone, dateLines, money
+  };
 })();

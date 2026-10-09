@@ -2,7 +2,15 @@
   'use strict';
   if (globalThis.__ubifPlusBoardStarted) return;
   globalThis.__ubifPlusBoardStarted = true;
+  // A reinjected content script shares this document with the instance it
+  // replaces; only the newest one may add its tab and host.
+  const owner = `${Date.now()}-${Math.random()}`;
+  document.documentElement.dataset.ubifPlusBoardOwner = owner;
+  const owns = () => document.documentElement.dataset.ubifPlusBoardOwner === owner;
   const M = globalThis.UBIFPlusBoard;
+  const S = globalThis.UBIFPlusSettings;
+  const fallback = { board: true, boardRefreshSec: 60, boardIncludeTomorrow: false };
+  let config = { ...fallback };
   const el = (tag, text = '', attrs = {}) => {
     const node = document.createElement(tag); node.textContent = text;
     for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
@@ -211,9 +219,19 @@
     host.hidden = true; tab.setAttribute('aria-selected', 'false'); restore();
     document.documentElement.removeAttribute('data-ubif-board-active');
   }
+  /* Applies the settings record: the feature toggle mounts or removes the tab,
+     the default fills in the toolbar checkbox, and the refresh cadence restarts. */
+  function apply(next) {
+    if (!owns()) return;
+    config = { ...fallback, ...(next || {}) };
+    tomorrow.checked = !!config.boardIncludeTomorrow;
+    scheduleRefresh();
+    mount();
+    if (config.board) render();
+  }
   function mount() {
-    if (!globalThis.document?.body) return;
-    if (!/^\/repair\/workorders\/?$/.test(location.pathname)) { if (active) deactivate(); tab.remove(); host.remove(); return; }
+    if (!globalThis.document?.body || !owns()) return;
+    if (!config.board || !/^\/repair\/workorders\/?$/.test(location.pathname)) { if (active) deactivate(); tab.remove(); host.remove(); return; }
     const ready = [...document.querySelectorAll('[role=tab]')].find(n => !n.hasAttribute('data-ubif-board-tab') && /ready for pickup/i.test(n.textContent));
     if (!ready) { if (active) deactivate(); tab.remove(); host.remove(); return; }
     const list = ready.closest('[role=tablist]') || ready.parentElement;
@@ -259,11 +277,17 @@
   });
   observer.observe(document.body, { childList: true, subtree: true });
   setInterval(() => { if (location.href !== lastURL) { lastURL = location.href; if (active) deactivate(); mount(); } }, 400);
-  setInterval(() => { if (!document.hidden) load(); }, 60000);
+  let refreshTimer = null;
+  function scheduleRefresh() {
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => { if (config.board && !document.hidden) load(); }, config.boardRefreshSec * 1000);
+  }
   window.addEventListener('focus', () => load());
   document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
   channel?.addEventListener('message', () => load());
   window.addEventListener('pagehide', () => { observer.disconnect(); listController?.abort(); detailController?.abort(); });
   window.addEventListener('pageshow', () => { mount(); observer.observe(document.body, { childList: true, subtree: true }); if (active) load(); });
-  mount();
+  // Settings arrive after the first paint so the default behavior is immediate.
+  apply();
+  if (S) { S.get().then(apply, () => {}); S.subscribe(apply); }
 })();

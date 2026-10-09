@@ -2,7 +2,16 @@
   'use strict';
   if (globalThis.__ubifPlusSearchStarted) return;
   globalThis.__ubifPlusSearchStarted = true;
+  // A reinjected content script shares this document with the instance it
+  // replaces; only the newest one owns the field, so an older copy can never
+  // re-mount its own input next to the live one.
+  const owner = `${Date.now()}-${Math.random()}`;
+  document.documentElement.dataset.ubifPlusSearchOwner = owner;
+  const owns = () => document.documentElement.dataset.ubifPlusSearchOwner === owner;
   const { categories, plan, rows } = globalThis.UBIFPlusSearch;
+  const S = globalThis.UBIFPlusSettings;
+  const fallback = { search: true, searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true };
+  let config = { ...fallback };
   const el = (tag, text, attrs = {}) => {
     const node = document.createElement(tag);
     if (text) node.textContent = text;
@@ -13,6 +22,7 @@
   style.textContent = `
     [data-ubif-native-search] { display:none!important }
     #ubif-universal-search { position:relative; width:100%; min-width:180px; max-width:640px; font:inherit; color:var(--aui-on-surface,#222); }
+    #ubif-universal-search[data-ubif-slot=header] { flex:0 1 420px; width:auto; min-width:200px; max-width:520px; }
     #ubif-universal-search input { box-sizing:border-box; width:100%; min-height:48px; border:1px solid var(--aui-outline,#bbb); border-radius:12px; padding:12px 42px 12px 16px; font:inherit; color:inherit; background:var(--aui-elevated-level-01,#fff); }
     #ubif-universal-search input:focus { outline:2px solid var(--aui-primary,#8224ce); outline-offset:2px; }
     #ubif-universal-search button { font:inherit; color:inherit; cursor:pointer; }
@@ -38,7 +48,7 @@
   function stop() { clearTimeout(timer); controller?.abort(); generation++; }
   function render() {
     panel.replaceChildren(status);
-    if (!groups.length) { status.textContent = 'Search all five categories. Enter at least 3 characters.'; return; }
+    if (!groups.length) { status.textContent = `Search all five categories. Enter at least ${config.searchMinChars} characters.`; return; }
     const count = groups.reduce((sum, g) => sum + g.rows.length, 0);
     const pending = groups.some(g => g.pending);
     status.textContent = `${pending ? 'Searching… ' : ''}${count} result${count === 1 ? '' : 's'}${groups.some(g => g.error) ? ' · Some searches could not finish' : ''}`;
@@ -65,7 +75,7 @@
   }
   async function search() {
     stop();
-    const id = generation, query = input.value.trim(), requests = plan(query);
+    const id = generation, query = input.value.trim(), requests = plan(query, config.searchMinChars);
     groups = categories.map(name => ({ name, rows: [], pending: requests.filter(r => r.category === name).length, active: requests.some(r => r.category === name), error: '' }));
     if (!requests.length) groups = [];
     render();
@@ -101,8 +111,8 @@
   }
   function changed() {
     stop(); groups = []; render(); open(true);
-    if (!composing && input.value.trim().length >= 3) {
-      status.textContent = 'Searching…'; timer = setTimeout(search, 350);
+    if (!composing && input.value.trim().length >= config.searchMinChars) {
+      status.textContent = 'Searching…'; timer = setTimeout(search, config.searchDebounceMs);
     }
   }
   input.addEventListener('input', changed);
@@ -124,22 +134,64 @@
   document.addEventListener('pointerdown', event => { if (!root.contains(event.target)) open(false); });
   root.addEventListener('focusout', event => { if (!root.contains(event.relatedTarget)) open(false); });
   document.addEventListener('keydown', event => {
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && mounted) { event.preventDefault(); input.focus(); }
+    if (config.searchHotkey && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && mounted) { event.preventDefault(); input.focus(); }
   });
   function mount() {
-    if (!globalThis.document) return;
+    if (!globalThis.document || !config.search || !owns()) return;
     // Observed portal header slot, shared by the collapsed and expanded search.
     const slot = document.querySelector('header .components-header-searchbox');
     if (!slot) return;
     for (const child of slot.children) {
       if (child !== root) child.setAttribute('data-ubif-native-search', '');
     }
-    if (root.parentElement === slot) return;
+    // The portal collapses that slot at some widths. Parking the field in the
+    // visible header keeps a scanned query and its results on screen.
+    const header = slot.closest('header');
+    const target = (slot.getClientRects().length === 0 && header) ? header : slot;
+    if (root.parentElement === target) { mounted = true; return; }
     if (mounted) { stop(); input.value = ''; groups = []; open(false); }
-    slot.prepend(root);
+    target.prepend(root);
+    root.dataset.ubifSlot = target === header ? 'header' : 'slot';
     mounted = true;
   }
-  new MutationObserver(mount).observe(document.body, { childList: true, subtree: true });
+  function unmount() {
+    stop(); input.value = ''; groups = []; open(false);
+    root.remove(); mounted = false;
+    // Hand the portal's own search field back when the feature is switched off.
+    for (const node of document.querySelectorAll('[data-ubif-native-search]')) node.removeAttribute('data-ubif-native-search');
+  }
+  function apply(next) {
+    config = { ...fallback, ...(next || {}) };
+    if (!owns()) return;
+    if (config.search) mount(); else unmount();
+  }
+  /* Programmatic entry point for scanner.js: a scan lands in the field and is
+     searched straight away, with no typing delay. Returns false when the
+     feature is off or not mounted so the caller can leave the portal alone. */
+  globalThis.UBIFPlusSearchUI = Object.freeze({
+    run(value) {
+      const query = String(value == null ? '' : value).trim();
+      if (!config.search || !mounted || query.length < config.searchMinChars) return false;
+      stop();
+      groups = [];
+      input.value = query.slice(0, Number(input.getAttribute('maxlength')) || 200);
+      open(true);
+      render();
+      status.textContent = 'Searching…';
+      input.focus();
+      search();
+      return true;
+    }
+  });
+  new MutationObserver(() => { if (config.search) mount(); }).observe(document.body, { childList: true, subtree: true });
+  // A window resize can collapse the portal's slot without touching the DOM.
+  let resizeTimer;
+  addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (config.search) mount(); }, 150);
+  });
   window.addEventListener('popstate', () => { stop(); input.value = ''; groups = []; open(false); });
   mount();
+  // Settings arrive after the first paint so the default behavior is immediate.
+  if (S) { S.get().then(apply, () => {}); S.subscribe(apply); }
 })();

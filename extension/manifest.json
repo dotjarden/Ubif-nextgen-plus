@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "UBIF NextGen Plus",
   "description": "Update Today work order board, Portal notes and scheduling, scanning, universal search, and custom columns.",
-  "version": "0.5.0",
+  "version": "0.7.0",
   "permissions": [
     "storage"
   ],
@@ -22,6 +22,8 @@
         "https://portal.ubreakifix.net/*"
       ],
       "js": [
+        "settings.js",
+        "home.js",
         "scanner.js",
         "model.js",
         "content.js",
@@ -40,7 +42,8 @@
     "128": "icons/icon-128.png"
   },
   "action": {
-    "default_title": "UBIF NextGen Plus",
+    "default_title": "UBIF NextGen Plus settings",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",
