@@ -4,7 +4,11 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ## [Unreleased]
 
-No changes yet.
+### Improved
+
+- New icon artwork: a dark rounded tile with a white **U** and a sky-blue plus, sourced from `icon.svg` and rendered into every toolbar, notification, and store-facing asset. The previous raster art is kept as `old-icon.jpeg`.
+
+Sources: [`405d926`](https://github.com/dotjarden/Ubif-nextgen-plus/commit/405d926).
 
 ## [0.8.3] — 2026-10-09
 

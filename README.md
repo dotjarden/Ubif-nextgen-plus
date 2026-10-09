@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="extension/icons/icon-128.png" width="88" height="88" alt="UBIF NextGen Plus icon">
+  <img src="icon.svg" width="88" height="88" alt="UBIF NextGen Plus icon">
   <h1>UBIF NextGen Plus</h1>
   <p><strong>Less clicking. Faster lookups. A portal that works your way.</strong></p>
   <p>Universal search, barcode scanning, custom tables, a daily update board, and a movable support chat for the UBIF portal.</p>
