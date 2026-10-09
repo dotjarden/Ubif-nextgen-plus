@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Subtle drop shadow to give the strokes physical depth, avoiding the "glowing" look -->
+    <filter id="depthShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Deep, flat slate background for a modern, enterprise dark-mode aesthetic -->
+  <rect width="512" height="512" rx="112" fill="#0B1120"/>
+  
+  <!-- Subtle inner border for a premium framing effect -->
+  <rect width="508" height="508" x="2" y="2" rx="110" fill="none" stroke="#1E293B" stroke-width="4"/>
+
+  <!-- Minimalist Geometric Mark -->
+  <g fill="none" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" filter="url(#depthShadow)">
+    
+    <!-- The "U" / Device Base
+         Represents both the letter U (Ubif) and the sleek silhouette of a mobile device -->
+    <path d="M 152 214 
+             L 152 342 
+             C 152 377.3 180.7 406 216 406 
+             L 296 406 
+             C 331.3 406 360 377.3 360 342 
+             L 360 282" 
+          stroke="#F8FAFC"/>
+          
+    <!-- The "Plus" / NextGen Indicator
+         Positioned to follow an upward, forward trajectory to symbolize "NextGen" 
+         while acting as the top-right completion of the U shape -->
+    <path d="M 360 106 L 360 186 
+             M 320 146 L 400 146" 
+          stroke="#38BDF8"/>
+  </g>
+</svg>
