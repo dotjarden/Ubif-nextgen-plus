@@ -1,6 +1,10 @@
 /* Shared toolbar popup and full settings page. */
 (() => {
   'use strict';
+  // A toolbar popup needs an intrinsic width: viewport-relative caps can
+  // lock Chrome's auto-sizing popup to its initial, narrow viewport.
+  const popupViews = typeof chrome !== 'undefined' && chrome.extension?.getViews?.({ type: 'popup' });
+  document.documentElement.classList.toggle('full-page', !popupViews || !popupViews.includes(window));
   const S = globalThis.UBIFPlusSettings;
   if (!S) return;
   const status = document.getElementById('ubif-status');

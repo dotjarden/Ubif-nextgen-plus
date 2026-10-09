@@ -406,3 +406,19 @@ test('localhost preview cannot reload the installed extension', async t => {
   assert.equal(dom.window.document.querySelector('#reload-extension').disabled, true);
   assert.equal(dom.window.document.querySelector('#preview-note').hidden, false);
 });
+
+test('toolbar popup keeps its own layout while full settings use the responsive page layout', async t => {
+  for (const isPopup of [true, false]) {
+    const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html', runScripts: 'outside-only' });
+    t.after(() => dom.window.close());
+    const w = dom.window;
+    storage(w);
+    w.chrome.extension = { getViews: options => {
+      assert.equal(options.type, 'popup');
+      return isPopup ? [w] : [];
+    } };
+    w.eval(settingsScript); w.eval(popupScript); await tick(w);
+    assert.equal(w.document.documentElement.classList.contains('full-page'), !isPopup);
+    assert.equal(w.document.querySelector('[data-key=search]').disabled, false);
+  }
+});
