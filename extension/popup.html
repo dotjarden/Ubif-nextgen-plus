@@ -27,10 +27,11 @@ nav a[aria-current=page] { color:var(--text); background:var(--selected); font-w
 nav a:last-child { margin-top:18px; }
 main { flex:1; min-width:0; overflow:auto; padding:22px 26px; scrollbar-gutter:stable; }
 section { margin-bottom:12px; }
-h2 { margin:0 0 16px; font-size:19px; font-weight:600; letter-spacing:-.35px; }
+h2 { margin:0 0 12px; padding-bottom:14px; border-bottom:1px solid var(--line); font-size:22px; line-height:1.25; font-weight:600; letter-spacing:-.45px; }
 section>p { font-size:13px; color:var(--soft); }
 .row { display:flex; align-items:center; gap:22px; padding:12px 0; border-bottom:1px solid var(--line); cursor:pointer; }
-.row>span { flex:1; min-width:0; }
+.row>span { flex:1; min-width:0; font-weight:500; }
+.row small { display:block; margin-top:4px; color:var(--soft); font-size:12px; line-height:1.5; font-weight:400; }
 .row input[type=checkbox] { width:17px; height:17px; margin:0; flex:none; accent-color:var(--accent); cursor:pointer; }
 .row input[type=number] { width:76px; padding:5px 7px; border:1px solid var(--line); border-radius:4px; background:var(--paper); font-variant-numeric:tabular-nums; }
 .row:has(input:disabled) { color:var(--soft); cursor:default; }
@@ -46,7 +47,7 @@ code { padding:1px 3px; background:var(--sidebar); font-size:12px; overflow-wrap
 footer { flex:none; display:flex; align-items:center; gap:12px; padding:10px 16px; border-top:1px solid var(--line); }
 #ubif-status { flex:1; min-width:0; margin:0; color:var(--soft); font-size:12px; }
 #ubif-status[data-error=true] { color:var(--error); }
-.footer-actions { display:flex; gap:8px; flex:none; }
+.footer-actions { margin-left:auto; display:flex; gap:8px; flex:none; }
 .footer-button { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:6px 9px; border:1px solid var(--line); border-radius:5px; color:var(--text); text-decoration:none; font-size:12px; white-space:nowrap; }
 .footer-button:hover { background:var(--sidebar); border-color:var(--soft); }
 .footer-button svg { width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
@@ -78,51 +79,51 @@ html.full-page { width:auto; min-width:0; }
   <a href="#support" data-section="support">Support chat</a>
   <a href="#updates" data-section="updates">Updates &amp; help</a></nav><main id="settings-content">
 <section id="home" aria-labelledby="home-title"><h2 id="home-title" tabindex="-1">Home</h2>
-  <label class="row"><span>Hide Home calendar</span><input type="checkbox" data-key="hideHomeCalendar" data-depends="" disabled></label>
+  <label class="row"><span>Hide Home calendar<small>Hide the Arrivals calendar on Home to give the main content more room.</small></span><input type="checkbox" data-key="hideHomeCalendar" data-depends="" disabled></label>
   <button class="reset" type="button" data-reset="home" disabled>Restore defaults</button>
 </section>
 <section id="search" aria-labelledby="search-title"><h2 id="search-title" tabindex="-1">Universal search</h2>
-  <label class="row"><span>Universal search</span><input type="checkbox" data-key="search" data-depends="" disabled></label>
-  <label class="row"><span>Cmd/Ctrl + K shortcut</span><input type="checkbox" data-key="searchHotkey" data-depends="search" disabled></label>
-  <label class="row"><span>Open results in a new tab</span><input type="checkbox" data-key="searchNewTab" data-depends="search" disabled></label>
-  <label class="row"><span>Search delay (ms)</span><input type="number" min="100" max="2000" step="50" data-key="searchDebounceMs" data-depends="search" disabled></label>
-  <label class="row"><span>Minimum characters</span><input type="number" min="3" max="10" step="1" data-key="searchMinChars" data-depends="search" disabled></label>
-  <label class="row"><span>Search customers</span><input type="checkbox" data-key="searchCustomers" data-depends="search" disabled></label>
-  <label class="row"><span>Search work orders</span><input type="checkbox" data-key="searchWorkOrders" data-depends="search" disabled></label>
-  <label class="row"><span>Search items</span><input type="checkbox" data-key="searchItems" data-depends="search" disabled></label>
-  <label class="row"><span>Search claims</span><input type="checkbox" data-key="searchClaims" data-depends="search" disabled></label>
-  <label class="row"><span>Search inventory serials</span><input type="checkbox" data-key="searchSerials" data-depends="search" disabled></label>
+  <label class="row"><span>Enable universal search<small>Replace the portal search box with universal search.</small></span><input type="checkbox" data-key="search" data-depends="" disabled></label>
+  <label class="row"><span>Cmd/Ctrl + K shortcut<small>Focus search from anywhere in the portal.</small></span><input type="checkbox" data-key="searchHotkey" data-depends="search" disabled></label>
+  <label class="row"><span>Open results in a new tab<small>Keep the current portal page open when selecting a result.</small></span><input type="checkbox" data-key="searchNewTab" data-depends="search" disabled></label>
+  <label class="row"><span>Search delay (ms)<small>How long to wait after you stop typing. Range: 100–2,000 ms.</small></span><input type="number" min="100" max="2000" step="50" data-key="searchDebounceMs" data-depends="search" disabled></label>
+  <label class="row"><span>Minimum characters<small>Minimum query length. Work orders still need 5 digits; claims need 6 characters.</small></span><input type="number" min="3" max="10" step="1" data-key="searchMinChars" data-depends="search" disabled></label>
+  <label class="row"><span>Search customers<small>Include customers and arrivals for a unique customer match.</small></span><input type="checkbox" data-key="searchCustomers" data-depends="search" disabled></label>
+  <label class="row"><span>Search work orders<small>Find work orders by their order number.</small></span><input type="checkbox" data-key="searchWorkOrders" data-depends="search" disabled></label>
+  <label class="row"><span>Search items<small>Include available parts and item matches.</small></span><input type="checkbox" data-key="searchItems" data-depends="search" disabled></label>
+  <label class="row"><span>Search claims<small>Include work orders and upcoming arrivals with a matching claim.</small></span><input type="checkbox" data-key="searchClaims" data-depends="search" disabled></label>
+  <label class="row"><span>Search inventory serials<small>Look up inventory serial numbers. This does not add a device IMEI lookup.</small></span><input type="checkbox" data-key="searchSerials" data-depends="search" disabled></label>
   <button class="reset" type="button" data-reset="search" disabled>Restore defaults</button>
 </section>
 <section id="board" aria-labelledby="board-title"><h2 id="board-title" tabindex="-1">Update Today</h2>
-  <label class="row"><span>Update Today board</span><input type="checkbox" data-key="board" data-depends="" disabled></label>
-  <label class="row"><span>Include tomorrow by default</span><input type="checkbox" data-key="boardIncludeTomorrow" data-depends="board" disabled></label>
-  <label class="row"><span>Refresh automatically</span><input type="checkbox" data-key="boardAutoRefresh" data-depends="board" disabled></label>
-  <label class="row"><span>Refresh interval (seconds)</span><input type="number" min="15" max="600" step="15" data-key="boardRefreshSec" data-depends="board boardAutoRefresh" disabled></label>
-  <label class="row"><span>Drag cards between statuses</span><input type="checkbox" data-key="boardDragDrop" data-depends="board" disabled></label>
-  <label class="row"><span>Show empty status columns</span><input type="checkbox" data-key="boardShowEmpty" data-depends="board" disabled></label>
+  <label class="row"><span>Enable Update Today<small>Add the Update Today tab to Workorders.</small></span><input type="checkbox" data-key="board" data-depends="" disabled></label>
+  <label class="row"><span>Include tomorrow by default<small>Include tomorrow’s updates when the board opens.</small></span><input type="checkbox" data-key="boardIncludeTomorrow" data-depends="board" disabled></label>
+  <label class="row"><span>Refresh automatically<small>Refresh while the board is visible. Returning to it always refreshes.</small></span><input type="checkbox" data-key="boardAutoRefresh" data-depends="board" disabled></label>
+  <label class="row"><span>Refresh interval (seconds)<small>Time between automatic refreshes. Range: 15–600 seconds.</small></span><input type="number" min="15" max="600" step="15" data-key="boardRefreshSec" data-depends="board boardAutoRefresh" disabled></label>
+  <label class="row"><span>Drag cards between statuses<small>Drop a card on a supported status to open the change dialog.</small></span><input type="checkbox" data-key="boardDragDrop" data-depends="board" disabled></label>
+  <label class="row"><span>Show empty status columns<small>Keep standard status columns visible when they have no orders.</small></span><input type="checkbox" data-key="boardShowEmpty" data-depends="board" disabled></label>
   <button class="reset" type="button" data-reset="board" disabled>Restore defaults</button>
 </section>
 <section id="scanner" aria-labelledby="scanner-title"><h2 id="scanner-title" tabindex="-1">Barcode scanning</h2>
-  <label class="row"><span>Barcode scanning</span><input type="checkbox" data-key="scanner" data-depends="" disabled></label>
-  <label class="row"><span>Open work orders and portal links</span><input type="checkbox" data-key="scannerOpenLinks" data-depends="scanner" disabled></label>
-  <label class="row"><span>Send other scans to search</span><input type="checkbox" data-key="scannerSearch" data-depends="scanner search" disabled></label>
-  <label class="row"><span>Purchase order receiving</span><input type="checkbox" data-key="scannerReceiving" data-depends="scanner" disabled></label>
-  <label class="row"><span>Focus the OEM serial field</span><input type="checkbox" data-key="scannerOEMFocus" data-depends="scanner scannerReceiving" disabled></label>
-  <label class="row"><span>Confirm valid OEM serials automatically</span><input type="checkbox" data-key="scannerOEMConfirm" data-depends="scanner scannerReceiving" disabled></label>
+  <label class="row"><span>Enable barcode scanning<small>Recognize keyboard-mode scans ending in Enter or Tab.</small></span><input type="checkbox" data-key="scanner" data-depends="" disabled></label>
+  <label class="row"><span>Open work orders and portal links<small>Navigate directly from scanned order numbers or portal URLs.</small></span><input type="checkbox" data-key="scannerOpenLinks" data-depends="scanner" disabled></label>
+  <label class="row"><span>Send other scans to search<small>Send other supported barcodes to universal search. Requires search to be enabled.</small></span><input type="checkbox" data-key="scannerSearch" data-depends="scanner search" disabled></label>
+  <label class="row"><span>Purchase order receiving<small>Send repeated part scans to the portal’s receiving workflow.</small></span><input type="checkbox" data-key="scannerReceiving" data-depends="scanner" disabled></label>
+  <label class="row"><span>Focus the OEM serial field<small>Focus the serial input when the OEM dialog opens during receiving.</small></span><input type="checkbox" data-key="scannerOEMFocus" data-depends="scanner scannerReceiving" disabled></label>
+  <label class="row"><span>Confirm valid OEM serials automatically<small>Confirm a scanned serial after portal validation. Turn off to review it first.</small></span><input type="checkbox" data-key="scannerOEMConfirm" data-depends="scanner scannerReceiving" disabled></label>
   <button class="reset" type="button" data-reset="scanner" disabled>Restore defaults</button>
 </section>
 <section id="columns" aria-labelledby="columns-title"><h2 id="columns-title" tabindex="-1">Table columns</h2>
-  <label class="row"><span>Custom columns</span><input type="checkbox" data-key="columns" data-depends="" disabled></label>
-  <label class="row"><span>Workorders</span><input type="checkbox" data-key="columnsWorkorders" data-depends="columns" disabled></label>
-  <label class="row"><span>Arrivals</span><input type="checkbox" data-key="columnsArrivals" data-depends="columns" disabled></label>
+  <label class="row"><span>Enable custom columns<small>Use the Columns button on each table to choose fields, order, and widths.</small></span><input type="checkbox" data-key="columns" data-depends="" disabled></label>
+  <label class="row"><span>Workorders<small>Allow custom layouts on Workorders. Each tab keeps its own layout.</small></span><input type="checkbox" data-key="columnsWorkorders" data-depends="columns" disabled></label>
+  <label class="row"><span>Arrivals<small>Allow a separate custom layout on the Arrivals table.</small></span><input type="checkbox" data-key="columnsArrivals" data-depends="columns" disabled></label>
   <button class="reset" type="button" data-reset="columns" disabled>Restore defaults</button>
 </section>
 <section id="support" aria-labelledby="support-title"><h2 id="support-title" tabindex="-1">Support chat</h2>
-  <label class="row"><span>Movable support chat</span><input type="checkbox" data-key="support" data-depends="" disabled></label>
-  <label class="row"><span>Desktop notifications</span><input type="checkbox" data-key="supportDesktopNotifications" data-depends="support" disabled></label>
-  <label class="row"><span>Unread counts</span><input type="checkbox" data-key="supportUnreadBadge" data-depends="support" disabled></label>
-  <label class="row"><span>Message previews</span><input type="checkbox" data-key="supportMessagePreview" data-depends="support supportDesktopNotifications" disabled></label>
+  <label class="row"><span>Movable support chat<small>Move, minimize, or open chat in another tab while keeping the portal usable.</small></span><input type="checkbox" data-key="support" data-depends="" disabled></label>
+  <label class="row"><span>Desktop notifications<small>Notify when a reply arrives while chat is hidden or the tab is in the background.</small></span><input type="checkbox" data-key="supportDesktopNotifications" data-depends="support" disabled></label>
+  <label class="row"><span>Unread counts<small>Show unread counts on the support button and extension icon.</small></span><input type="checkbox" data-key="supportUnreadBadge" data-depends="support" disabled></label>
+  <label class="row"><span>Message previews<small>Include reply text in desktop notifications. Turn off for a generic alert.</small></span><input type="checkbox" data-key="supportMessagePreview" data-depends="support supportDesktopNotifications" disabled></label>
   <button class="reset" type="button" data-reset="support" disabled>Restore defaults</button>
 </section>
 <section id="updates" aria-labelledby="updates-title">
