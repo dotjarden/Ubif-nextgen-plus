@@ -8,6 +8,10 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 - New icon artwork: a dark rounded tile with a white **U** and a sky-blue plus, sourced from `icon.svg` and rendered into every toolbar, notification, and store-facing asset. The previous raster art is kept as `old-icon.jpeg`.
 
+### Fixed
+
+- Scanning a product SKU or part number into the portal's own search bar, or into the "add part" input on a work order diagnostic stage, no longer blanks the field. The scanner now detects portal-owned inputs — any input inside an open dialog and inputs on work order detail pages — and lets the portal handle the scan natively instead of redirecting it to universal search.
+
 Sources: [`405d926`](https://github.com/dotjarden/Ubif-nextgen-plus/commit/405d926).
 
 ## [0.8.3] — 2026-10-09

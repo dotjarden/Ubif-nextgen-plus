@@ -285,3 +285,46 @@ test('OEM scan can require manual confirmation and leave focus alone', async t =
   await new Promise(resolve => setTimeout(resolve, 20));
   assert.equal(modal.confirmed, 0);
 });
+
+test('scanning a SKU into a dialog input lets the portal keep the keystrokes', t => {
+  const b = boot(t), queries = withSearch(b);
+  // Simulate a dialog open on the page (e.g. "add part" modal on WO diag).
+  const dialog = b.w.document.createElement('div');
+  dialog.setAttribute('role', 'dialog');
+  const input = b.w.document.createElement('input');
+  input.type = 'text';
+  dialog.append(input);
+  b.w.document.body.append(dialog);
+  // Scan a part SKU while focused on the dialog's input.
+  const result = b.scan('4902567890123', { target: input });
+  assert.equal(result.defaultPrevented, false, 'dialog input scan is not intercepted');
+  assert.deepEqual(queries, [], 'the SKU never reaches universal search');
+  assert.deepEqual(b.navigations, []);
+  dialog.remove();
+});
+
+test('scanning a SKU into a WO detail page input lets the portal keep the keystrokes', t => {
+  const b = boot(t), queries = withSearch(b);
+  // Navigate to a work order detail page (diag stage).
+  b.w.history.pushState({}, '', '/repair/workorder/30787644');
+  const input = b.w.document.querySelector('input');
+  // Scan a part SKU while focused on the WO page input.
+  const result = b.scan('4902567890123', { target: input });
+  assert.equal(result.defaultPrevented, false, 'WO detail input scan is not intercepted');
+  assert.deepEqual(queries, [], 'the SKU never reaches universal search');
+  assert.deepEqual(b.navigations, []);
+});
+
+test('scanning a WO number on a WO detail page still navigates', t => {
+  const b = boot(t);
+  b.w.history.pushState({}, '', '/repair/workorder/30787644');
+  b.scan('12345678');
+  assert.deepEqual(b.navigations, ['/repair/workorder/12345678'], 'WO numbers still navigate');
+});
+
+test('scanning a SKU on the workorders list page still goes to universal search', t => {
+  const b = boot(t), queries = withSearch(b);
+  // On the workorders list page (not a WO detail page), body is focused.
+  b.scan('4902567890123');
+  assert.deepEqual(queries, ['4902567890123'], 'SKU still goes to universal search from list page');
+});
