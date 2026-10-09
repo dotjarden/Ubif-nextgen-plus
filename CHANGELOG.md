@@ -15,14 +15,23 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Improved
 
-- Settings use a quieter sidebar, shorter labels, grouped controls, and compact footer links, with more space for the form.
-
-- Live settings now queue rapid edits, serialize writes across settings pages, reject stale reads, and reconcile when tabs resume. Numeric controls apply valid input before blur. Unrelated edits preserve active board/search/scanner state; support badges refresh immediately.
-
-- Settings expose dependencies, save automatically, restore displayed values after a failed save, and reflect changes from another settings page.
-- Search keeps its field reachable when the portal header becomes narrow and protects result clicks while responses arrive.
-- Update Today presents scheduling, status changes, and notes in a more organized order dialog.
+- Settings now use a neutral sidebar, clearer section headings, and concise descriptions beneath each control. Extra subheadings and the persistent footer tagline have been removed.
+- Feature request and Buy Me a Coffee links use compact buttons, leaving more room for the settings form.
+- Full-page settings use horizontal navigation on narrow screens. The toolbar popup retains a fixed 680px width.
+- Valid numeric settings apply while typing, without waiting for the field to lose focus.
 - README installation, updating, privacy, troubleshooting, and developer guidance; detailed behavior now has its own feature guide.
+- Update Today presents scheduling, status changes, and notes in a more organized order dialog.
+
+### Fixed
+
+- Cramped toolbar settings caused by viewport-dependent popup sizing.
+- Rapid settings edits being dropped while an earlier save was pending.
+- Conflicting edits from multiple settings pages and delayed storage reads overwriting newer preferences.
+- Suspended portal tabs missing settings changes; tabs reconcile saved preferences when they resume.
+- Unrelated settings edits resetting the board’s date filter or refresh timer, restarting search, or interrupting scanner input.
+- Support unread counts not updating immediately when badges are re-enabled. Disabling notification previews also clears an existing text notification.
+- Failed saves leaving controls showing values that were not stored.
+- Search results shifting during a click as responses arrive, and the search field becoming unreachable in narrow portal headers.
 
 ### Upgrade notes
 
