@@ -29,20 +29,15 @@ main { flex:1; min-width:0; overflow:auto; padding:22px 26px; scrollbar-gutter:s
 section { margin-bottom:12px; }
 h2 { margin:0 0 16px; font-size:19px; font-weight:600; letter-spacing:-.35px; }
 section>p { font-size:13px; color:var(--soft); }
-.settings-group { margin-top:22px; }
-.settings-group h3 { margin:0 0 4px; font-size:12px; font-weight:600; color:var(--soft); }
 .row { display:flex; align-items:center; gap:22px; padding:12px 0; border-bottom:1px solid var(--line); cursor:pointer; }
 .row>span { flex:1; min-width:0; }
-.row small { display:block; margin-top:3px; color:var(--soft); font-size:12px; line-height:1.5; }
 .row input[type=checkbox] { width:17px; height:17px; margin:0; flex:none; accent-color:var(--accent); cursor:pointer; }
 .row input[type=number] { width:76px; padding:5px 7px; border:1px solid var(--line); border-radius:4px; background:var(--paper); font-variant-numeric:tabular-nums; }
 .row:has(input:disabled) { color:var(--soft); cursor:default; }
 .row input:disabled { opacity:.45; cursor:default; }
 .reset { margin-top:22px; padding:3px 0; border:0; border-radius:2px; background:transparent; color:var(--soft); font-size:12px; text-decoration:underline; text-underline-offset:3px; }
 .reset:hover:not(:disabled) { background:transparent; color:var(--text); }
-.hint { margin:16px 0 0; line-height:1.6; }
 .help-card { margin:20px 0; }
-.help-card h3 { margin:0 0 5px; font-size:13px; font-weight:600; }
 .help-card p { margin:0; color:var(--soft); font-size:13px; }
 code { padding:1px 3px; background:var(--sidebar); font-size:12px; overflow-wrap:anywhere; }
 .help-links { display:flex; flex-wrap:wrap; gap:14px; margin-top:20px; }
@@ -50,7 +45,6 @@ code { padding:1px 3px; background:var(--sidebar); font-size:12px; overflow-wrap
 #preview-note { font-size:12px; }
 footer { flex:none; display:flex; align-items:center; gap:12px; padding:10px 16px; border-top:1px solid var(--line); }
 #ubif-status { flex:1; min-width:0; margin:0; color:var(--soft); font-size:12px; }
-#ubif-status:empty::before { content:"Changes apply immediately"; }
 #ubif-status[data-error=true] { color:var(--error); }
 .footer-actions { display:flex; gap:8px; flex:none; }
 .footer-button { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:6px 9px; border:1px solid var(--line); border-radius:5px; color:var(--text); text-decoration:none; font-size:12px; white-space:nowrap; }
@@ -84,66 +78,58 @@ html.full-page { width:auto; min-width:0; }
   <a href="#support" data-section="support">Support chat</a>
   <a href="#updates" data-section="updates">Updates &amp; help</a></nav><main id="settings-content">
 <section id="home" aria-labelledby="home-title"><h2 id="home-title" tabindex="-1">Home</h2>
-  <label class="row"><span>Hide Home calendar<small>Hide the Arrivals schedule on the right of Home.</small></span><input type="checkbox" data-key="hideHomeCalendar" data-depends="" disabled></label>
+  <label class="row"><span>Hide Home calendar</span><input type="checkbox" data-key="hideHomeCalendar" data-depends="" disabled></label>
   <button class="reset" type="button" data-reset="home" disabled>Restore defaults</button>
 </section>
 <section id="search" aria-labelledby="search-title"><h2 id="search-title" tabindex="-1">Universal search</h2>
-  <label class="row"><span>Universal search<small>Search from the portal header.</small></span><input type="checkbox" data-key="search" data-depends="" disabled></label>
-  <div class="settings-group"><h3>Behavior</h3>
-  <label class="row"><span>Keyboard shortcut<small>Press Cmd/Ctrl + K to focus search.</small></span><input type="checkbox" data-key="searchHotkey" data-depends="search" disabled></label>
+  <label class="row"><span>Universal search</span><input type="checkbox" data-key="search" data-depends="" disabled></label>
+  <label class="row"><span>Cmd/Ctrl + K shortcut</span><input type="checkbox" data-key="searchHotkey" data-depends="search" disabled></label>
   <label class="row"><span>Open results in a new tab</span><input type="checkbox" data-key="searchNewTab" data-depends="search" disabled></label>
-  <label class="row"><span>Search delay (ms)<small>Wait after typing before searching.</small></span><input type="number" min="100" max="2000" step="50" data-key="searchDebounceMs" data-depends="search" disabled></label>
-  <label class="row"><span>Minimum characters<small>Work orders need 5 digits; claims need 6 characters.</small></span><input type="number" min="3" max="10" step="1" data-key="searchMinChars" data-depends="search" disabled></label>
-  </div>
-  <div class="settings-group"><h3>Search in</h3>
-  <label class="row"><span>Customers<small>Includes arrivals for a unique customer match.</small></span><input type="checkbox" data-key="searchCustomers" data-depends="search" disabled></label>
-  <label class="row"><span>Work orders</span><input type="checkbox" data-key="searchWorkOrders" data-depends="search" disabled></label>
-  <label class="row"><span>Items<small>Available parts.</small></span><input type="checkbox" data-key="searchItems" data-depends="search" disabled></label>
-  <label class="row"><span>Claims<small>Work orders and upcoming arrivals.</small></span><input type="checkbox" data-key="searchClaims" data-depends="search" disabled></label>
-  <label class="row"><span>Serial numbers<small>Inventory serials, not device IMEIs.</small></span><input type="checkbox" data-key="searchSerials" data-depends="search" disabled></label>
-  </div>
+  <label class="row"><span>Search delay (ms)</span><input type="number" min="100" max="2000" step="50" data-key="searchDebounceMs" data-depends="search" disabled></label>
+  <label class="row"><span>Minimum characters</span><input type="number" min="3" max="10" step="1" data-key="searchMinChars" data-depends="search" disabled></label>
+  <label class="row"><span>Search customers</span><input type="checkbox" data-key="searchCustomers" data-depends="search" disabled></label>
+  <label class="row"><span>Search work orders</span><input type="checkbox" data-key="searchWorkOrders" data-depends="search" disabled></label>
+  <label class="row"><span>Search items</span><input type="checkbox" data-key="searchItems" data-depends="search" disabled></label>
+  <label class="row"><span>Search claims</span><input type="checkbox" data-key="searchClaims" data-depends="search" disabled></label>
+  <label class="row"><span>Search inventory serials</span><input type="checkbox" data-key="searchSerials" data-depends="search" disabled></label>
   <button class="reset" type="button" data-reset="search" disabled>Restore defaults</button>
 </section>
 <section id="board" aria-labelledby="board-title"><h2 id="board-title" tabindex="-1">Update Today</h2>
-  <label class="row"><span>Update Today board<small>Show the board in Workorders.</small></span><input type="checkbox" data-key="board" data-depends="" disabled></label>
-  <label class="row"><span>Include tomorrow by default<small>Sets the board’s initial date range.</small></span><input type="checkbox" data-key="boardIncludeTomorrow" data-depends="board" disabled></label>
-  <label class="row"><span>Refresh automatically<small>Opening or returning to the board always refreshes it.</small></span><input type="checkbox" data-key="boardAutoRefresh" data-depends="board" disabled></label>
+  <label class="row"><span>Update Today board</span><input type="checkbox" data-key="board" data-depends="" disabled></label>
+  <label class="row"><span>Include tomorrow by default</span><input type="checkbox" data-key="boardIncludeTomorrow" data-depends="board" disabled></label>
+  <label class="row"><span>Refresh automatically</span><input type="checkbox" data-key="boardAutoRefresh" data-depends="board" disabled></label>
   <label class="row"><span>Refresh interval (seconds)</span><input type="number" min="15" max="600" step="15" data-key="boardRefreshSec" data-depends="board boardAutoRefresh" disabled></label>
-  <label class="row"><span>Drag cards between statuses<small>Drop a card to open the status change dialog.</small></span><input type="checkbox" data-key="boardDragDrop" data-depends="board" disabled></label>
+  <label class="row"><span>Drag cards between statuses</span><input type="checkbox" data-key="boardDragDrop" data-depends="board" disabled></label>
   <label class="row"><span>Show empty status columns</span><input type="checkbox" data-key="boardShowEmpty" data-depends="board" disabled></label>
   <button class="reset" type="button" data-reset="board" disabled>Restore defaults</button>
 </section>
 <section id="scanner" aria-labelledby="scanner-title"><h2 id="scanner-title" tabindex="-1">Barcode scanning</h2>
-  <label class="row"><span>Barcode scanning<small>Use a keyboard-mode scanner ending in Enter or Tab.</small></span><input type="checkbox" data-key="scanner" data-depends="" disabled></label>
-  <div class="settings-group"><h3>Scan actions</h3>
-  <label class="row"><span>Open work orders and portal links<small>Open scanned order numbers and portal URLs.</small></span><input type="checkbox" data-key="scannerOpenLinks" data-depends="scanner" disabled></label>
-  <label class="row"><span>Send other scans to search<small>Requires universal search to be enabled.</small></span><input type="checkbox" data-key="scannerSearch" data-depends="scanner search" disabled></label>
-  </div>
-  <div class="settings-group"><h3>Purchase order receiving</h3>
-  <label class="row"><span>Purchase order receiving<small>Send scans to the portal receiving workflow.</small></span><input type="checkbox" data-key="scannerReceiving" data-depends="scanner" disabled></label>
-  <label class="row"><span>Focus the OEM serial field<small>Place the cursor in the serial field when the dialog opens.</small></span><input type="checkbox" data-key="scannerOEMFocus" data-depends="scanner scannerReceiving" disabled></label>
-  <label class="row"><span>Confirm valid OEM serials automatically<small>Turn off to review the serial before confirming.</small></span><input type="checkbox" data-key="scannerOEMConfirm" data-depends="scanner scannerReceiving" disabled></label>
-  </div>
+  <label class="row"><span>Barcode scanning</span><input type="checkbox" data-key="scanner" data-depends="" disabled></label>
+  <label class="row"><span>Open work orders and portal links</span><input type="checkbox" data-key="scannerOpenLinks" data-depends="scanner" disabled></label>
+  <label class="row"><span>Send other scans to search</span><input type="checkbox" data-key="scannerSearch" data-depends="scanner search" disabled></label>
+  <label class="row"><span>Purchase order receiving</span><input type="checkbox" data-key="scannerReceiving" data-depends="scanner" disabled></label>
+  <label class="row"><span>Focus the OEM serial field</span><input type="checkbox" data-key="scannerOEMFocus" data-depends="scanner scannerReceiving" disabled></label>
+  <label class="row"><span>Confirm valid OEM serials automatically</span><input type="checkbox" data-key="scannerOEMConfirm" data-depends="scanner scannerReceiving" disabled></label>
   <button class="reset" type="button" data-reset="scanner" disabled>Restore defaults</button>
 </section>
 <section id="columns" aria-labelledby="columns-title"><h2 id="columns-title" tabindex="-1">Table columns</h2>
-  <label class="row"><span>Custom columns<small>Save column layouts for each portal tab.</small></span><input type="checkbox" data-key="columns" data-depends="" disabled></label>
+  <label class="row"><span>Custom columns</span><input type="checkbox" data-key="columns" data-depends="" disabled></label>
   <label class="row"><span>Workorders</span><input type="checkbox" data-key="columnsWorkorders" data-depends="columns" disabled></label>
-  <label class="row"><span>Arrivals</span><input type="checkbox" data-key="columnsArrivals" data-depends="columns" disabled></label><p class="hint">Choose <strong>Columns</strong> on a portal table to change its layout. Layouts are saved separately for each view.</p>
+  <label class="row"><span>Arrivals</span><input type="checkbox" data-key="columnsArrivals" data-depends="columns" disabled></label>
   <button class="reset" type="button" data-reset="columns" disabled>Restore defaults</button>
 </section>
 <section id="support" aria-labelledby="support-title"><h2 id="support-title" tabindex="-1">Support chat</h2>
-  <label class="row"><span>Movable support chat<small>Move or minimize chat without blocking the portal.</small></span><input type="checkbox" data-key="support" data-depends="" disabled></label>
-  <label class="row"><span>Desktop notifications<small>For messages received while chat is hidden.</small></span><input type="checkbox" data-key="supportDesktopNotifications" data-depends="support" disabled></label>
-  <label class="row"><span>Unread counts<small>On the support button and extension icon.</small></span><input type="checkbox" data-key="supportUnreadBadge" data-depends="support" disabled></label>
-  <label class="row"><span>Message previews<small>Show reply text in desktop notifications.</small></span><input type="checkbox" data-key="supportMessagePreview" data-depends="support supportDesktopNotifications" disabled></label>
+  <label class="row"><span>Movable support chat</span><input type="checkbox" data-key="support" data-depends="" disabled></label>
+  <label class="row"><span>Desktop notifications</span><input type="checkbox" data-key="supportDesktopNotifications" data-depends="support" disabled></label>
+  <label class="row"><span>Unread counts</span><input type="checkbox" data-key="supportUnreadBadge" data-depends="support" disabled></label>
+  <label class="row"><span>Message previews</span><input type="checkbox" data-key="supportMessagePreview" data-depends="support supportDesktopNotifications" disabled></label>
   <button class="reset" type="button" data-reset="support" disabled>Restore defaults</button>
 </section>
 <section id="updates" aria-labelledby="updates-title">
   <h2 id="updates-title" tabindex="-1">Updates &amp; help</h2>
   <p>Keep the extension in the same folder to retain your settings and column layouts.</p>
-  <div class="help-card"><h3>Git installation</h3><p>Run <code>npm run update</code> in your checkout, or <code>git pull --ff-only</code>.</p></div>
-  <div class="help-card"><h3>ZIP installation</h3><p>Download the newer files and replace the contents of the folder you originally loaded.</p></div>
+  <div class="help-card"><p><strong>Git:</strong> Run <code>npm run update</code> in your checkout, or <code>git pull --ff-only</code>.</p></div>
+  <div class="help-card"><p><strong>ZIP:</strong> Download the newer files and replace the contents of the folder you originally loaded.</p></div>
   <p>After updating, reload the extension below, then refresh your portal tabs when your work is saved. Unpacked extensions do not update automatically.</p>
   <button id="reload-extension" type="button" disabled>Reload extension</button>
   <p id="preview-note" hidden>This is a preview. Open settings from Chrome’s extension toolbar to change your installed extension.</p>

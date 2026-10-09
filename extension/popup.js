@@ -38,10 +38,9 @@
     for (const section of sections) {
       let count = 0;
       for (const row of section.querySelectorAll('.row')) {
-        row.hidden = Boolean(query) && !`${section.querySelector('h2').textContent} ${row.closest('.settings-group')?.querySelector('h3')?.textContent || ''} ${row.textContent}`.toLowerCase().includes(query);
+        row.hidden = Boolean(query) && !`${section.querySelector('h2').textContent} ${row.textContent}`.toLowerCase().includes(query);
         if (!row.hidden) count++;
       }
-      for (const group of section.querySelectorAll('.settings-group')) group.hidden = ![...group.querySelectorAll('.row')].some(row => !row.hidden);
       if (!section.querySelector('.row') && section.textContent.toLowerCase().includes(query)) count++;
       section.hidden = query ? count === 0 : section.id !== selected;
       const reset = section.querySelector('.reset');
