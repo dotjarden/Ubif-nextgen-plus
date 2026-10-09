@@ -8,6 +8,8 @@
 
 ---
 
+**Latest release: [0.8.3](https://github.com/dotjarden/Ubif-nextgen-plus/releases/tag/v0.8.3)** · [What changed](CHANGELOG.md#083--2026-10-09)
+
 Built for Chrome and `portal.ubreakifix.net`. Runs inside your existing portal session, with no additional account or subscription. This is an independent extension, not an official UBIF or Asurion product.
 
 ## What you get
@@ -43,7 +45,7 @@ No build or npm install is needed to use the extension. Node.js is only needed f
 
 ### Without Git
 
-Download the repository using **Code → Download ZIP**, or use an extension ZIP from [Releases](https://github.com/dotjarden/Ubif-nextgen-plus/releases) when one is published.
+Download the repository using **Code → Download ZIP**, or download the extension ZIP from [the latest release](https://github.com/dotjarden/Ubif-nextgen-plus/releases/latest).
 
 Extract it into a permanent folder and follow steps 1–4 above. Source downloads contain an `extension` subfolder; packaged release ZIPs put `manifest.json` directly in the extracted folder. Load the folder containing that file. Keep it in place—Chrome reads the extension from there.
 

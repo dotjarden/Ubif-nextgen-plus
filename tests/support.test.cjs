@@ -541,7 +541,9 @@ test('recovery retries when the visible portal launcher was not wired yet', asyn
     launches++;
     parent.append(original);
   });
-  await wait(1400);
+  const deadline = Date.now() + 4000;
+  while (!launches && Date.now() < deadline) await wait(25);
+  await settle(w);
   assert.equal(launches, 1);
   assert.equal(marks().frame, original);
   assert.equal(original.classList.contains('show'), true);

@@ -4,6 +4,10 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ## [Unreleased]
 
+No changes yet.
+
+## [0.8.3] — 2026-10-09
+
 ### Added
 
 - Searchable settings with category navigation, a full-page view, and per-category resets.
@@ -37,7 +41,7 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 - Existing preferences and column layouts remain in extension-local storage. New controls preserve prior behavior by default; opening results in new tabs defaults to off.
 - Support desktop alerts require the `notifications` permission present in the working manifest. Review Chrome's permission prompt if upgrading from older source.
-- The working manifest is **0.8.2**. These changes are not claimed as a published 0.8.2 release; maintainers must choose a release version and move this entry to a dated heading before tagging.
+- Version **0.8.3** packages the settings, support chat, and update improvements previously available only from source.
 - Reload the extension and portal tabs after installing changed source. Live scanner timing, board writes, and support reconnection still require portal verification.
 
 ## [0.7.0] — 2026-10-08

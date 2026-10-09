@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "UBIF NextGen Plus",
   "description": "Update Today work order board, Portal notes and scheduling, scanning, universal search, and custom columns.",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "permissions": [
     "storage",
     "notifications"
