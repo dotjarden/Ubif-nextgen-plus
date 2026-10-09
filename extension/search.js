@@ -224,7 +224,9 @@
     for (const node of document.querySelectorAll('[data-ubif-native-search]')) node.removeAttribute('data-ubif-native-search');
   }
   function apply(next) {
+    const previous = config;
     config = { ...fallback, ...(next || {}) };
+    if (!Object.keys(config).some(key => key.startsWith('search') && config[key] !== previous[key])) return;
     if (!owns()) return;
     if (config.search) { mount(); if (input.value.trim()) search(); else render(); } else unmount();
   }

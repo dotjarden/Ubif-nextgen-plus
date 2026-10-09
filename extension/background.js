@@ -22,8 +22,8 @@ chrome.runtime.onMessage.addListener(message => {
       chrome.action.setBadgeText({ text: message.unread > 99 ? '99+' : String(message.unread) });
     }
   } else if (message.type === 'ubif-plus-chat-preferences') {
-    if (message.desktop === false) chrome.notifications.clear(ID, () => { void chrome.runtime.lastError; });
-    if (message.badge === false && chrome.action && chrome.action.setBadgeText) chrome.action.setBadgeText({ text: '' });
+    if (message.desktop === false || message.hidePreview) chrome.notifications.clear(ID, () => { void chrome.runtime.lastError; });
+    if (chrome.action && chrome.action.setBadgeText) chrome.action.setBadgeText({ text: message.badge !== false && message.unread > 0 ? (message.unread > 99 ? '99+' : String(message.unread)) : '' });
   } else if (message.type === 'ubif-plus-chat-seen') {
     chrome.notifications.clear(ID, () => { void chrome.runtime.lastError; });
     if (chrome.action && chrome.action.setBadgeText) chrome.action.setBadgeText({ text: '' });

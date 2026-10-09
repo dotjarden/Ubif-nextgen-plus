@@ -375,6 +375,12 @@ test('board preferences hide empty lanes, disable dragging, and stop periodic re
   assert.ok(root.querySelectorAll('.lane').length > 1);
   assert.equal(root.querySelector('.card').draggable, true);
   assert.equal(timers.size, 1);
+  const tomorrow = root.querySelector('input[type=checkbox]');
+  tomorrow.checked = true; tomorrow.dispatchEvent(new w.Event('change'));
+  const running = [...timers][0];
+  apply({ board: true, boardAutoRefresh: true, boardShowEmpty: true, boardDragDrop: true, searchHotkey: false });
+  assert.equal(tomorrow.checked, true, 'unrelated preferences preserve the board date filter');
+  assert.equal([...timers][0], running, 'unrelated edits do not restart the refresh timer');
 });
 
 test('Updates and help supports navigation, search, external links and explicit extension reload', async t => {
@@ -421,4 +427,100 @@ test('toolbar popup keeps its own layout while full settings use the responsive 
     assert.equal(w.document.documentElement.classList.contains('full-page'), !isPopup);
     assert.equal(w.document.querySelector('[data-key=search]').disabled, false);
   }
+});
+
+test('a delayed storage read cannot overwrite a more recent settings event', async t => {
+  const dom = page('<p>'); t.after(() => dom.window.close());
+  const w = dom.window, s = storage(w);
+  let resolveRead;
+  w.chrome.storage.local.get = () => new Promise(resolve => { resolveRead = resolve; });
+  w.eval(settingsScript);
+  const S = w.UBIFPlusSettings;
+  const reading = S.get();
+  s.changed({ search: false, boardRefreshSec: 120 });
+  resolveRead({ [KEY]: { search: true, boardRefreshSec: 60 } });
+  const result = await reading;
+  assert.equal(result.search, false);
+  assert.equal(result.boardRefreshSec, 120);
+});
+
+test('rapid writes merge in order, notify local subscribers, and recover after failure', async t => {
+  const dom = page('<p>'); t.after(() => dom.window.close());
+  const w = dom.window, s = storage(w);
+  w.eval(settingsScript);
+  const S = w.UBIFPlusSettings, seen = [];
+  S.subscribe(value => seen.push(value));
+  await Promise.all([S.set({ search: false }), S.set({ board: false }), S.set({ search: true })]);
+  assert.equal(s.data[KEY].search, true);
+  assert.equal(s.data[KEY].board, false);
+  assert.equal(seen.length, 3, 'writes notify even without a storage event in this document');
+  s.fail(true); await assert.rejects(S.set({ scanner: false }));
+  s.fail(false); await S.set({ support: false });
+  assert.equal(s.data[KEY].scanner, true);
+  assert.equal(s.data[KEY].support, false);
+  assert.equal(s.data[KEY].board, false);
+});
+
+test('two settings pages serialize writes and an already-open portal reacts without reload', async t => {
+  const data = {}, listeners = [], pages = [];
+  let lockQueue = Promise.resolve();
+  const locks = { request: (_key, fn) => {
+    const result = lockQueue.then(fn); lockQueue = result.catch(() => {}); return result;
+  } };
+  for (let i = 0; i < 3; i++) {
+    const dom = page('<header><div class="components-header-searchbox"><button>Native search</button></div></header>');
+    t.after(() => dom.window.close()); pages.push(dom.window);
+    Object.defineProperty(dom.window.navigator, 'locks', { value: locks });
+    dom.window.chrome = { storage: {
+      local: {
+        get: async () => JSON.parse(JSON.stringify(data)),
+        set: async patch => {
+          await new Promise(resolve => setTimeout(resolve, 5));
+          Object.assign(data, patch);
+          listeners.forEach(fn => fn({ [KEY]: { newValue: data[KEY] } }, 'local'));
+        }
+      }, onChanged: { addListener: fn => listeners.push(fn) }
+    } };
+    dom.window.eval(settingsScript);
+  }
+  const [first, second, portal] = pages;
+  portal.eval(searchModel); portal.eval(searchScript); await tick(portal);
+  assert.ok(portal.document.querySelector('#ubif-universal-search'));
+  await Promise.all([first.UBIFPlusSettings.set({ search: false }), second.UBIFPlusSettings.set({ scanner: false })]);
+  assert.equal(data[KEY].search, false); assert.equal(data[KEY].scanner, false);
+  assert.equal(portal.document.querySelector('#ubif-universal-search'), null);
+  await second.UBIFPlusSettings.set({ search: true });
+  assert.ok(portal.document.querySelector('#ubif-universal-search'));
+  assert.equal(data[KEY].scanner, false);
+});
+
+test('popup accepts rapid edits during slow saves and numeric input applies before blur', async t => {
+  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html#board', runScripts: 'outside-only' });
+  t.after(() => dom.window.close());
+  const w = dom.window, doc = w.document, s = storage(w);
+  const write = w.chrome.storage.local.set;
+  w.chrome.storage.local.set = async value => { await tick(w, 30); return write(value); };
+  w.eval(settingsScript); w.eval(popupScript); await tick(w);
+  const edit = (key, value) => {
+    const control = doc.querySelector(`[data-key=${key}]`);
+    assert.equal(control.disabled, false);
+    if (control.type === 'checkbox') control.checked = value; else control.value = String(value);
+    control.dispatchEvent(new w.Event('input'));
+  };
+  edit('boardShowEmpty', false); edit('boardDragDrop', false); edit('boardRefreshSec', 120);
+  await tick(w, 180);
+  assert.equal(s.data[KEY].boardShowEmpty, false);
+  assert.equal(s.data[KEY].boardDragDrop, false);
+  assert.equal(s.data[KEY].boardRefreshSec, 120);
+});
+
+test('resuming a tab reconciles persisted preferences even when an event was missed', async t => {
+  const dom = page('<p>'); t.after(() => dom.window.close());
+  const w = dom.window, s = storage(w);
+  w.eval(settingsScript);
+  await w.UBIFPlusSettings.get();
+  const seen = []; w.UBIFPlusSettings.subscribe(value => seen.push(value));
+  s.data[KEY] = { hideHomeCalendar: true };
+  w.dispatchEvent(new w.Event('focus')); await tick(w);
+  assert.equal(seen.at(-1).hideHomeCalendar, true);
 });

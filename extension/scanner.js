@@ -148,6 +148,7 @@
   // working before it does.
   if (S) {
     const apply = settings => {
+      if (settingsReady && !Object.keys(settings).some(key => key.startsWith('scanner') && config[key] !== settings[key])) return;
       if (!settingsReady || ['scanner', 'scannerReceiving', 'scannerOEMFocus'].some(key => config[key] !== settings[key])) focusedOEM = null;
       settingsReady = true;
       config = settings;

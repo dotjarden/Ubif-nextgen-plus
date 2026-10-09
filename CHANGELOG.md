@@ -15,6 +15,8 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Improved
 
+- Live settings now queue rapid edits, serialize writes across settings pages, reject stale reads, and reconcile when tabs resume. Numeric controls apply valid input before blur. Unrelated edits preserve active board/search/scanner state; support badges refresh immediately.
+
 - Settings expose dependencies, save automatically, restore displayed values after a failed save, and reflect changes from another settings page.
 - Search keeps its field reachable when the portal header becomes narrow and protects result clicks while responses arrive.
 - Update Today presents scheduling, status changes, and notes in a more organized order dialog.

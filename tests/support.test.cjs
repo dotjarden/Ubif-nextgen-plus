@@ -559,3 +559,22 @@ test('support settings suppress previews and badges before delivering a hidden m
   assert.deepEqual(message, { type: 'ubif-plus-chat-message', text: '', unread: 1, desktop: false, badge: false });
   assert.equal(w.document.querySelector('.ubif-plus-chat-badge').classList.contains('ubif-plus-chat-badge-on'), false);
 });
+
+test('existing unread counts update immediately when support badge preferences change', async t => {
+  const { w, s, marks, sends } = boot(t);
+  await settle(w);
+  const frame = marks().frame, doc = frame.querySelector('iframe').contentDocument;
+  frame.style.display = 'none'; frame.classList.remove('show');
+  const row = doc.createElement('div'); row.dataset.testid = 'message-container'; row.textContent = 'A reply'; doc.body.append(row);
+  await wait(20);
+  const badge = w.document.querySelector('.ubif-plus-chat-badge');
+  s.changed({ support: true, supportUnreadBadge: false });
+  assert.equal(badge.classList.contains('ubif-plus-chat-badge-on'), false);
+  s.changed({ support: true, supportUnreadBadge: true, supportMessagePreview: false });
+  assert.equal(badge.classList.contains('ubif-plus-chat-badge-on'), true);
+  const message = sends.at(-1);
+  assert.equal(message.type, 'ubif-plus-chat-preferences');
+  assert.equal(message.unread, 1);
+  assert.equal(message.badge, true);
+  assert.equal(message.hidePreview, true);
+});

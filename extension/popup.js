@@ -13,7 +13,8 @@
   const navigation = [...document.querySelectorAll('[data-section]')];
   const filter = document.getElementById('settings-search');
   const resets = [...document.querySelectorAll('[data-reset]')];
-  let flashTimer, current, saving = false;
+  let flashTimer, current, saving = false, pendingCount = 0, editId = 0;
+  const pendingEdits = new Map();
   let selected = sections.some(s => `#${s.id}` === location.hash) ? location.hash.slice(1) : 'home';
   function flash(text, error) {
     status.textContent = text;
@@ -24,12 +25,12 @@
   function fill(settings) {
     current = settings;
     for (const control of controls) {
-      const value = settings[control.dataset.key];
+      const value = pendingEdits.get(control.dataset.key)?.value ?? settings[control.dataset.key];
       if (control.type === 'checkbox') control.checked = Boolean(value);
       else control.value = String(value);
-      control.disabled = saving || control.dataset.depends.split(' ').filter(Boolean).some(key => !settings[key]);
+      control.disabled = control.dataset.depends.split(' ').filter(Boolean).some(key => !(pendingEdits.get(key)?.value ?? settings[key]));
     }
-    resets.forEach(button => { button.disabled = saving; });
+    resets.forEach(button => { button.disabled = false; });
   }
   function show() {
     const query = filter.value.trim().toLowerCase();
@@ -63,18 +64,32 @@
   });
   filter.addEventListener('input', show);
   async function save(patch) {
-    if (!current || saving) return;
-    const previous = current;
-    saving = true; fill({ ...current, ...patch }); flash('Saving…');
-    try { current = await S.set(patch); flash('Saved'); }
-    catch { current = previous; flash('Could not save. Try again.', true); }
-    finally { saving = false; fill(current); }
+    if (!current) return;
+    const id = ++editId;
+    for (const [key, value] of Object.entries(patch)) pendingEdits.set(key, { id, value });
+    pendingCount++; saving = true; fill(current); flash('Saving…');
+    let failed = false;
+    try { current = await S.set(patch); }
+    catch { failed = true; }
+    finally {
+      for (const key of Object.keys(patch)) if (pendingEdits.get(key)?.id === id) pendingEdits.delete(key);
+      saving = --pendingCount > 0;
+      fill(current);
+      if (failed) flash('Could not save. Try again.', true);
+      else if (!saving) flash('Saved');
+    }
   }
-  controls.forEach(control => control.addEventListener('change', () => {
-    const number = control.value.trim() === '' ? NaN : Number(control.value);
-    const value = control.type === 'checkbox' ? control.checked : Number.isFinite(number) ? number : S.defaults[control.dataset.key];
-    save({ [control.dataset.key]: value });
-  }));
+  controls.forEach(control => {
+    const edit = live => {
+      const number = control.value.trim() === '' ? NaN : Number(control.value);
+      if (live && control.type === 'number' && (!Number.isFinite(number) || !control.validity.valid)) return;
+      const value = control.type === 'checkbox' ? control.checked : Number.isFinite(number) ? number : S.defaults[control.dataset.key];
+      if (value === (pendingEdits.get(control.dataset.key)?.value ?? current?.[control.dataset.key])) return;
+      save({ [control.dataset.key]: value });
+    };
+    control.addEventListener('input', () => edit(true));
+    control.addEventListener('change', () => edit(false));
+  });
   resets.forEach(button => button.addEventListener('click', () => {
     const keys = [...document.getElementById(button.dataset.reset).querySelectorAll('[data-key]')];
     save(Object.fromEntries(keys.map(control => [control.dataset.key, S.defaults[control.dataset.key]])));
@@ -96,6 +111,6 @@
   const manifest = typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.();
   if (manifest) document.getElementById('ubif-version').textContent = `v${manifest.version}`;
   show();
-  S.subscribe(settings => { if (!saving) fill(settings); });
+  S.subscribe(fill);
   S.get().then(fill, () => flash('Could not read settings. Reopen settings to try again.', true));
 })();

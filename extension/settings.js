@@ -38,7 +38,7 @@
     hideHomeCalendar: false
   });
   const range = { searchDebounceMs: [100, 2000], searchMinChars: [3, 10], boardRefreshSec: [15, 600] };
-  let current = { ...defaults }, hooked = false;
+  let current = { ...defaults }, hooked = false, revision = 0, writes = Promise.resolve();
   const listeners = new Set();
   const channel = name => (typeof chrome !== 'undefined' && chrome.storage && chrome.storage[name]) || null;
   const clamp = (value, [low, high]) => Math.min(high, Math.max(low, value));
@@ -59,46 +59,73 @@
     return next;
   }
 
-  function get() {
+  function publish(raw) {
+    const next = sanitize(raw);
+    revision++;
+    if (Object.keys(defaults).every(key => current[key] === next[key])) return;
+    current = next;
+    for (const listener of [...listeners]) { try { listener({ ...current }); } catch {} }
+  }
+
+  function hook() {
+    const bus = channel('onChanged');
+    if (!bus || hooked) return;
+    hooked = true;
+    bus.addListener((changes, area) => {
+      if (area && area !== 'local') return;
+      const change = changes && changes[KEY];
+      if (change) publish(change.newValue);
+    });
+  }
+
+  async function get() {
+    hook();
     const local = channel('local');
-    if (!local) return Promise.resolve({ ...current });
-    return local.get(KEY).then(data => {
-      current = sanitize(data && typeof data === 'object' ? data[KEY] : null);
-      return { ...current };
-    }, () => ({ ...current }));
+    if (!local) return { ...current };
+    const before = revision;
+    const data = await local.get(KEY);
+    // A slow initial read must never undo a newer storage event.
+    if (before === revision) publish(data && data[KEY]);
+    return { ...current };
   }
 
   function set(patch) {
-    const previous = current;
-    const merged = { ...current };
-    if (patch && typeof patch === 'object') Object.assign(merged, patch);
-    current = sanitize(merged);
-    const local = channel('local');
-    if (!local) return Promise.resolve({ ...current });
-    return local.set({ [KEY]: { ...current } }).then(
-      () => ({ ...current }),
-      error => { current = previous; throw error; }
-    );
+    const requested = Object.fromEntries(Object.entries(patch || {}).filter(([key]) => key in defaults));
+    const save = async () => {
+      const perform = async () => {
+        await get();
+        const next = sanitize({ ...current, ...requested });
+        const local = channel('local');
+        const before = revision;
+        if (local) await local.set({ [KEY]: next });
+        // Chrome may deliver onChanged before the write promise resolves.
+        if (revision === before) publish(next);
+        return { ...current };
+      };
+      // Settings pages share the extension origin. Serialize their read/merge/
+      // write cycles as well as rapid edits within this document.
+      const locks = globalThis.navigator?.locks;
+      return locks ? locks.request(KEY, perform) : perform();
+    };
+    const result = writes.then(save, save);
+    writes = result.catch(() => {});
+    return result;
   }
-
-  function notify() { for (const listener of [...listeners]) { try { listener({ ...current }); } catch {} } }
 
   function subscribe(listener) {
     if (typeof listener !== 'function') return () => {};
+    hook();
     listeners.add(listener);
-    const bus = channel('onChanged');
-    if (bus && !hooked) {
-      hooked = true;
-      bus.addListener((changes, area) => {
-        if (area && area !== 'local') return;
-        const change = changes && changes[KEY];
-        if (!change) return;
-        current = sanitize(change.newValue);
-        notify();
-      });
-    }
     return () => listeners.delete(listener);
   }
+  hook();
+  // A restored/suspended portal tab also reconciles with the persisted record.
+  const reconcile = () => { get().catch(() => {}); };
+  globalThis.addEventListener?.('focus', reconcile);
+  globalThis.addEventListener?.('pageshow', reconcile);
+  globalThis.document?.addEventListener('visibilitychange', () => {
+    if (!document.hidden) reconcile();
+  });
 
   globalThis.UBIFPlusSettings = Object.freeze({ KEY, defaults, get, set, subscribe, sanitize });
 })();

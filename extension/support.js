@@ -614,10 +614,12 @@
   }, () => {});
 
   const setEnabled = settings => {
+    const previous = config;
     config = settings || {};
     const next = config.support !== false;
     if (enabled) paintBadge();
-    if (!next || config.supportDesktopNotifications === false || config.supportUnreadBadge === false) send({ type: 'ubif-plus-chat-preferences', desktop: next && config.supportDesktopNotifications !== false, badge: next && config.supportUnreadBadge !== false });
+    const alertsChanged = ['support', 'supportDesktopNotifications', 'supportUnreadBadge', 'supportMessagePreview'].some(key => previous[key] !== config[key]);
+    if (alertsChanged && (!next || unread || config.supportDesktopNotifications === false || config.supportUnreadBadge === false)) send({ type: 'ubif-plus-chat-preferences', desktop: next && config.supportDesktopNotifications !== false, badge: next && config.supportUnreadBadge !== false, unread, hidePreview: config.supportMessagePreview === false });
     if (next === enabled) { if (next) schedule(); return; }
     enabled = next;
     // The rule set is in place before the widget opens, so the first frame of

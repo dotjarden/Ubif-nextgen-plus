@@ -314,9 +314,10 @@
      the default fills in the toolbar checkbox, and the refresh cadence restarts. */
   function apply(next) {
     if (!owns()) return;
+    const previous = config;
     config = { ...fallback, ...(next || {}) };
-    tomorrow.checked = !!config.boardIncludeTomorrow;
-    scheduleRefresh();
+    if (previous.boardIncludeTomorrow !== config.boardIncludeTomorrow) tomorrow.checked = !!config.boardIncludeTomorrow;
+    if (!refreshTimer || ['board', 'boardAutoRefresh', 'boardRefreshSec'].some(key => previous[key] !== config[key])) scheduleRefresh();
     mount();
     if (config.board) render();
   }
