@@ -188,7 +188,51 @@ test('unknown note outcome blocks duplicate save until explicit order/notes refr
   buttons('Add note to Portal').click(); await flush();
   assert.equal(buttons('Add note to Portal').disabled, true);
   assert.match(root.querySelector('dialog [role=status]').textContent, /outcome is unknown/);
-  buttons('Refresh order / notes').click(); await flush();
+  root.querySelector('[aria-label="Refresh order / notes"]').click(); await flush();
   assert.equal(buttons('Add note to Portal').disabled, false);
   assert.equal(root.querySelector('[aria-label="New work order note"]').value, 'A fictional test note.');
+});
+
+test('modal retains order context and stages one scheduling action without writing', async t => {
+  const { w, s } = await boot(t);
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  root.querySelector('.card button').click(); await flush();
+  assert.equal(root.querySelector('#ubif-board-order-title').textContent, 'Taylor Reed');
+  assert.match(root.querySelector('#ubif-board-order-context').textContent, /10001234/);
+  assert.equal(root.querySelector('.order-device').textContent, 'Phone');
+  const actions = root.querySelector('.schedule-actions');
+  const shown = () => [...actions.querySelectorAll('button')].filter(n => !n.classList.contains('hidden')).map(n => n.textContent);
+  assert.deepEqual(shown(), ['Save update time']);
+  const select = root.querySelector('[aria-label="Move to status"]');
+  const reason = root.querySelector('[aria-label="Reason for status change"]');
+  select.value = '3'; select.dispatchEvent(new w.Event('change'));
+  assert.deepEqual(shown(), ['Save status + update time']);
+  assert.equal(reason.closest('label').classList.contains('hidden'), false);
+  reason.value = 'Parts arrive next week.';
+  select.value = ''; select.dispatchEvent(new w.Event('change'));
+  assert.deepEqual(shown(), ['Save update time']);
+  assert.equal(reason.closest('label').classList.contains('hidden'), true);
+  select.value = '3'; select.dispatchEvent(new w.Event('change'));
+  assert.equal(reason.value, 'Parts arrive next week.');
+  assert.equal(s.calls.some(c => ['POST', 'PATCH', 'PUT'].includes(c.method) && c.path !== '/api/workorders'), false);
+});
+
+test('quick-date selection clears on manual edit and refresh without losing note drafts', async t => {
+  const { w } = await boot(t);
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  root.querySelector('.card button').click(); await flush();
+  const date = root.querySelector('[type=datetime-local]');
+  const chip = root.querySelector('.chips button');
+  chip.click();
+  assert.equal(chip.getAttribute('aria-pressed'), 'true');
+  assert.equal(date.value, M.nextDate(1));
+  date.value = '2026-12-01T15:20'; date.dispatchEvent(new w.Event('input'));
+  assert.equal(chip.getAttribute('aria-pressed'), 'false');
+  chip.click();
+  root.querySelector('[aria-label="New work order note"]').value = 'Keep this unsent note.';
+  root.querySelector('[aria-label="Refresh order / notes"]').click(); await flush();
+  assert.equal(chip.getAttribute('aria-pressed'), 'false');
+  assert.equal(root.querySelector('[aria-label="New work order note"]').value, 'Keep this unsent note.');
 });

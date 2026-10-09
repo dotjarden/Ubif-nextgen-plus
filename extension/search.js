@@ -12,6 +12,8 @@
   const S = globalThis.UBIFPlusSettings;
   const fallback = { search: true, searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true };
   let config = { ...fallback };
+  const categoryKeys = { Customers: 'searchCustomers', 'Work orders': 'searchWorkOrders', Items: 'searchItems', Claims: 'searchClaims', 'Serial numbers': 'searchSerials' };
+  const enabledCategories = () => categories.filter(name => config[categoryKeys[name]] !== false);
   const el = (tag, text, attrs = {}) => {
     const node = document.createElement(tag);
     if (text) node.textContent = text;
@@ -21,12 +23,24 @@
   const style = el('style');
   style.textContent = `
     [data-ubif-native-search] { display:none!important }
-    #ubif-universal-search { position:relative; width:100%; min-width:180px; max-width:640px; font:inherit; color:var(--aui-on-surface,#222); }
+    /* The field claims the header's spare space up to the width it opens at
+       (480px). On a roomy window that is exactly its width; when the window is
+       tight it gives up room instead of pushing the portal's own header items
+       (support, store, clock, notifications, avatar) off the screen. */
+    header .components-header-searchbox:has(> #ubif-universal-search) { flex:1 1 auto; min-width:0; max-width:480px; }
+    #ubif-universal-search { position:relative; width:100%; min-width:0; max-width:480px; font:inherit; color:var(--aui-on-surface,#222); }
     #ubif-universal-search[data-ubif-slot=header] { flex:0 1 420px; width:auto; min-width:200px; max-width:520px; }
-    #ubif-universal-search input { box-sizing:border-box; width:100%; min-height:48px; border:1px solid var(--aui-outline,#bbb); border-radius:12px; padding:12px 42px 12px 16px; font:inherit; color:inherit; background:var(--aui-elevated-level-01,#fff); }
+    #ubif-universal-search input { box-sizing:border-box; width:100%; min-height:48px; border:1px solid var(--aui-outline,#bbb); border-radius:12px; padding:12px; font:inherit; color:inherit; background:var(--aui-elevated-level-01,#fff); }
     #ubif-universal-search input:focus { outline:2px solid var(--aui-primary,#8224ce); outline-offset:2px; }
+    /* The browser's own clear button would sit beside ours, so only ours shows,
+       and it only shows when there is something to clear. */
+    #ubif-universal-search input::-webkit-search-cancel-button, #ubif-universal-search input::-webkit-search-decoration { -webkit-appearance:none; appearance:none; display:none; }
     #ubif-universal-search button { font:inherit; color:inherit; cursor:pointer; }
-    #ubif-search-clear { position:absolute; right:8px; top:8px; border:0; background:transparent; padding:6px; }
+    #ubif-search-clear { position:absolute; right:4px; top:8px; border:0; background:transparent; padding:6px; line-height:1; }
+    #ubif-search-clear[hidden] { display:none; }
+    /* An empty field keeps the whole line for its placeholder; the clear button
+       only claims its 34px once there is text to clear. */
+    #ubif-universal-search:not([data-ubif-empty]) input { padding-right:34px; }
     #ubif-search-results { position:absolute; top:calc(100% + 8px); left:0; width:min(640px,calc(100vw - 32px)); box-sizing:border-box; max-height:70vh; overflow:auto; z-index:1100; padding:16px; border:1px solid var(--aui-outline,#ddd); border-radius:16px; background:var(--aui-elevated-level-03,#fff); box-shadow:0 8px 32px #0003; }
     #ubif-search-results[hidden] { display:none; }
     #ubif-search-results h3 { font:inherit; font-weight:bold; margin:16px 0 6px; }
@@ -44,11 +58,51 @@
   const status = el('p', '', { role: 'status', 'aria-live': 'polite' });
   root.append(input, clear, panel);
   let timer, controller, generation = 0, groups = [], composing = false, mounted = false;
+  /* The clear button and its reserved right-hand padding only exist while there
+     is text to clear, so an empty field is just a full-width placeholder. */
+  function syncClear() {
+    const empty = input.value === '';
+    clear.hidden = empty;
+    root.toggleAttribute('data-ubif-empty', empty);
+  }
+  syncClear();
+  /* The placeholder follows the room the field actually has: a tight window
+     shows the short one instead of clipping "Search everything…". Only the
+     ResizeObserver drives it, and only a real change is written, so portal
+     re-renders never touch the field. A width of 0 means "not laid out yet",
+     so the full copy stays put. */
+  const fitPlaceholder = width => {
+    if (width <= 0) return;
+    const next = width >= 240 ? 'Search everything…' : 'Search…';
+    if (input.placeholder !== next) input.placeholder = next;
+  };
+  if (typeof ResizeObserver === 'function') new ResizeObserver(entries => fitPlaceholder(entries[0].contentRect.width)).observe(root);
   function open(value) { panel.hidden = !value; input.setAttribute('aria-expanded', String(value)); }
   function stop() { clearTimeout(timer); controller?.abort(); generation++; }
+  /* A search that finishes between a press and its release rebuilds the panel
+     and swaps the row out from under the pointer, so the click lands on a
+     detached element and nothing happens. The panel therefore holds still while
+     the pointer is down on it, and the rebuild runs on the next turn — after
+     the click has been dispatched. A release that never arrives (the pointer
+     left the window mid-drag) must not freeze the panel for good, so the press
+     also expires on its own and any press outside the panel ends it. */
+  let pressing = false, dirty = false, flushTimer = 0, pressTimer = 0;
+  const flush = () => { flushTimer = 0; clearTimeout(pressTimer); pressing = false; if (dirty) { dirty = false; render(); } };
+  const scheduleFlush = () => { clearTimeout(flushTimer); flushTimer = setTimeout(flush, 0); };
+  const release = () => { if (pressing) scheduleFlush(); };
+  panel.addEventListener('pointerdown', () => {
+    pressing = true;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(release, 1000);
+  });
+  panel.addEventListener('click', scheduleFlush);
+  addEventListener('pointerup', release);
+  addEventListener('pointercancel', release);
+  addEventListener('blur', release);
   function render() {
+    if (pressing) { dirty = true; return; }
     panel.replaceChildren(status);
-    if (!groups.length) { status.textContent = `Search all five categories. Enter at least ${config.searchMinChars} characters.`; return; }
+    if (!groups.length) { status.textContent = `${enabledCategories().length ? `Search enabled categories. Enter at least ${config.searchMinChars} characters.` : 'All search categories are off. Enable a category in extension settings.'}`; return; }
     const count = groups.reduce((sum, g) => sum + g.rows.length, 0);
     const pending = groups.some(g => g.pending);
     status.textContent = `${pending ? 'Searching… ' : ''}${count} result${count === 1 ? '' : 's'}${groups.some(g => g.error) ? ' · Some searches could not finish' : ''}`;
@@ -58,6 +112,7 @@
       if (!group.active) section.append(el('p', group.name === 'Work orders' ? 'Enter a work order number (at least 5 digits).' : group.name === 'Claims' ? 'Claims need at least 6 characters.' : 'Enter an inventory serial, e.g. I-1234567890.'));
       for (const row of group.rows) {
         const link = el('a', row.title, { href: row.href });
+        if (config.searchNewTab) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
         if (row.label) link.prepend(el('span', row.label, { class: 'ubif-result-label' }));
         if (row.detail) link.append(el('small', row.detail));
         section.append(link);
@@ -75,8 +130,8 @@
   }
   async function search() {
     stop();
-    const id = generation, query = input.value.trim(), requests = plan(query, config.searchMinChars);
-    groups = categories.map(name => ({ name, rows: [], pending: requests.filter(r => r.category === name).length, active: requests.some(r => r.category === name), error: '' }));
+    const id = generation, query = input.value.trim(), requests = plan(query, config.searchMinChars).filter(r => enabledCategories().includes(r.category));
+    groups = enabledCategories().map(name => ({ name, rows: [], pending: requests.filter(r => r.category === name).length, active: requests.some(r => r.category === name), error: '' }));
     if (!requests.length) groups = [];
     render();
     if (!requests.length) return;
@@ -110,6 +165,7 @@
     clearTimeout(timeout);
   }
   function changed() {
+    syncClear();
     stop(); groups = []; render(); open(true);
     if (!composing && input.value.trim().length >= config.searchMinChars) {
       status.textContent = 'Searching…'; timer = setTimeout(search, config.searchDebounceMs);
@@ -131,8 +187,15 @@
       links[(index + (event.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length].focus();
     }
   });
-  document.addEventListener('pointerdown', event => { if (!root.contains(event.target)) open(false); });
-  root.addEventListener('focusout', event => { if (!root.contains(event.relatedTarget)) open(false); });
+  document.addEventListener('pointerdown', event => {
+    if (!root.contains(event.target)) open(false);
+    // A press starting anywhere else ends an in-flight panel press, so a
+    // missed release can never leave the results frozen.
+    if (!panel.contains(event.target)) release();
+  });
+  // A press on a result can leave the field without a focus target; while the
+  // pointer is over the panel the results must stay up or the click is lost.
+  root.addEventListener('focusout', event => { if (!root.contains(event.relatedTarget) && !panel.matches(':hover')) open(false); });
   document.addEventListener('keydown', event => {
     if (config.searchHotkey && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && mounted) { event.preventDefault(); input.focus(); }
   });
@@ -149,13 +212,13 @@
     const header = slot.closest('header');
     const target = (slot.getClientRects().length === 0 && header) ? header : slot;
     if (root.parentElement === target) { mounted = true; return; }
-    if (mounted) { stop(); input.value = ''; groups = []; open(false); }
+    if (mounted) { stop(); input.value = ''; syncClear(); groups = []; open(false); }
     target.prepend(root);
     root.dataset.ubifSlot = target === header ? 'header' : 'slot';
     mounted = true;
   }
   function unmount() {
-    stop(); input.value = ''; groups = []; open(false);
+    stop(); input.value = ''; syncClear(); groups = []; open(false);
     root.remove(); mounted = false;
     // Hand the portal's own search field back when the feature is switched off.
     for (const node of document.querySelectorAll('[data-ubif-native-search]')) node.removeAttribute('data-ubif-native-search');
@@ -163,7 +226,7 @@
   function apply(next) {
     config = { ...fallback, ...(next || {}) };
     if (!owns()) return;
-    if (config.search) mount(); else unmount();
+    if (config.search) { mount(); if (input.value.trim()) search(); else render(); } else unmount();
   }
   /* Programmatic entry point for scanner.js: a scan lands in the field and is
      searched straight away, with no typing delay. Returns false when the
@@ -175,6 +238,7 @@
       stop();
       groups = [];
       input.value = query.slice(0, Number(input.getAttribute('maxlength')) || 200);
+      syncClear();
       open(true);
       render();
       status.textContent = 'Searching…';
@@ -190,7 +254,7 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => { if (config.search) mount(); }, 150);
   });
-  window.addEventListener('popstate', () => { stop(); input.value = ''; groups = []; open(false); });
+  window.addEventListener('popstate', () => { stop(); input.value = ''; syncClear(); groups = []; open(false); });
   mount();
   // Settings arrive after the first paint so the default behavior is immediate.
   if (S) { S.get().then(apply, () => {}); S.subscribe(apply); }

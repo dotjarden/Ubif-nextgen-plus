@@ -65,6 +65,83 @@ test('late results cannot replace a newer query and clearing cancels requests', 
   assert.equal(w.document.querySelectorAll('#ubif-search-results a').length, 0);
 });
 
+test('the clear button only exists while there is text, and never beside the browser\'s own', async t => {
+  const w = boot(t, async () => ok([]));
+  const root = w.document.querySelector('#ubif-universal-search');
+  const input = root.querySelector('input');
+  const clear = root.querySelector('#ubif-search-clear');
+  const css = [...w.document.querySelectorAll('style')].map(node => node.textContent).join('');
+  assert.match(css, /#ubif-universal-search input::-webkit-search-cancel-button/, 'the native clear button is suppressed');
+  assert.match(css, /#ubif-universal-search:not\(\[data-ubif-empty\]\) input \{ padding-right:34px; \}/, 'text only reserves room for the clear button');
+  assert.match(css, /#ubif-search-clear\[hidden\] \{ display:none; \}/);
+  assert.equal(clear.hidden, true, 'an empty field has no clear button');
+  assert.equal(root.hasAttribute('data-ubif-empty'), true, 'the placeholder keeps the full width');
+  enter(w, 'Jane'); await wait(20);
+  assert.equal(clear.hidden, false, 'text makes it appear');
+  assert.equal(root.hasAttribute('data-ubif-empty'), false);
+  clear.click();
+  assert.equal(input.value, '');
+  assert.equal(clear.hidden, true, 'clearing hides it again');
+  assert.equal(root.hasAttribute('data-ubif-empty'), true);
+});
+
+test('a result under the pointer survives a rebuild, which waits for the click', async t => {
+  const w = boot(t, async () => ok([{ id: 7, fullName: 'Ali Ahmad', clientId: 1 }]));
+  enter(w, 'ali'); await wait(30);
+  const panel = w.document.querySelector('#ubif-search-results');
+  const link = panel.querySelector('a');
+  assert.ok(link, 'a result is on screen');
+  link.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true }));
+  // A late category response rebuilds the panel through changed(); typing forces
+  // the same rebuild path while the press is still down.
+  const input = w.document.querySelector('#ubif-universal-search input');
+  input.value = 'ali2'; input.dispatchEvent(new w.Event('input'));
+  assert.equal(panel.querySelector('a'), link, 'the pressed row is still the row on screen');
+  w.dispatchEvent(new w.MouseEvent('pointerup'));
+  await wait(20);
+  assert.notEqual(panel.querySelector('a'), link, 'the rebuild lands once the click has been dispatched');
+});
+
+test('a missed release never keeps the panel frozen', async t => {
+  const w = boot(t, async () => ok([{ id: 7, fullName: 'Ali Ahmad', clientId: 1 }]));
+  enter(w, 'ali'); await wait(30);
+  const panel = w.document.querySelector('#ubif-search-results');
+  const input = w.document.querySelector('#ubif-universal-search input');
+  const link = panel.querySelector('a');
+  link.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true }));
+  // The release never arrives: the pointer left the window mid-drag.
+  input.value = 'ali2'; input.dispatchEvent(new w.Event('input'));
+  assert.equal(panel.querySelector('a'), link, 'held while the press is live');
+  await wait(1100);
+  assert.notEqual(panel.querySelector('a'), link, 'the press expires on its own');
+  // And a press outside the panel ends it straight away.
+  enter(w, 'ali'); await wait(30);
+  assert.ok(panel.querySelector('a'), 'results are back');
+  panel.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true }));
+  input.value = 'ali3'; input.dispatchEvent(new w.Event('input'));
+  assert.ok(panel.querySelector('a'), 'still held');
+  w.document.body.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true }));
+  await wait(20);
+  assert.equal(panel.querySelector('a'), null, 'an outside press flushes the backlog');
+});
+
+test('the field has one state — open in the header — and focus changes nothing', async t => {
+  const w = boot(t, async () => ok([]));
+  const root = w.document.querySelector('#ubif-universal-search');
+  const input = root.querySelector('input');
+  const css = [...w.document.querySelectorAll('style')].map(node => node.textContent).join('');
+  assert.match(css, /#ubif-universal-search \{ position:relative; width:100%; min-width:0; max-width:480px;/, 'one width, no collapsed variant');
+  assert.match(css, /components-header-searchbox:has\(> #ubif-universal-search\) \{ flex:1 1 auto; min-width:0; max-width:480px; \}/, 'the field takes the header\'s spare space, up to the width it opens at');
+  assert.doesNotMatch(css, /data-ubif-expanded/, 'no collapsed/expanded duality');
+  assert.equal(input.placeholder, 'Search everything…');
+  input.dispatchEvent(new w.FocusEvent('focus'));
+  assert.equal(root.hasAttribute('data-ubif-expanded'), false, 'focusing adds no state');
+  assert.equal(input.placeholder, 'Search everything…');
+  input.dispatchEvent(new w.FocusEvent('focusout', { bubbles: true, relatedTarget: w.document.body }));
+  assert.equal(root.hasAttribute('data-ubif-expanded'), false, 'blurring changes no state');
+  assert.equal(input.placeholder, 'Search everything…');
+});
+
 test('debounces typing, supports keyboard dismissal, and mounts after SPA header replacement', async t => {
   let count = 0;
   const w = boot(t, async path => { count++; return empty(path); });

@@ -35,7 +35,7 @@
     try { window.chrome.storage = shim.storage; window.chrome.runtime = shim.runtime; window.chrome.tabs = shim.tabs; }
     catch (e) { console.warn('[ubif preview] chrome shim failed', error, e); return; }
   }
-  const SCRIPTS = ['settings.js', 'home.js', 'page.js', 'scanner.js', 'model.js', 'content.js', 'search-model.js', 'search.js', 'board-model.js', 'board.js'];
+  const SCRIPTS = ['settings.js', 'home.js', 'page.js', 'scanner.js', 'model.js', 'content.js', 'search-model.js', 'search.js', 'board-model.js', 'board.js', 'support.js'];
   /* Scripts keep their own observers and listeners, so a second copy cannot be
      retired cleanly from the outside. A reload therefore starts a fresh
      document, and re-fetching this file loads the new scripts into it. */

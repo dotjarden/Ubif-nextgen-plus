@@ -58,9 +58,13 @@ test('settings fall back to defaults, keep known keys only, and clamp the number
   const S = dom.window.UBIFPlusSettings;
   const defaults = await S.get();
   assert.deepEqual(JSON.parse(JSON.stringify(defaults)), {
-    search: true, board: true, scanner: true, columns: true, hideHomeCalendar: false,
+    search: true, board: true, scanner: true, columns: true, support: true, hideHomeCalendar: false,
     searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true,
-    boardRefreshSec: 60, boardIncludeTomorrow: false
+    boardRefreshSec: 60, boardIncludeTomorrow: false,
+    searchCustomers: true, searchWorkOrders: true, searchItems: true, searchClaims: true, searchSerials: true, searchNewTab: false,
+    scannerOpenLinks: true, scannerSearch: true, scannerReceiving: true, scannerOEMFocus: true, scannerOEMConfirm: true,
+    columnsWorkorders: true, columnsArrivals: true, supportDesktopNotifications: true, supportUnreadBadge: true,
+    supportMessagePreview: true, boardAutoRefresh: true, boardDragDrop: true, boardShowEmpty: true
   });
   const next = await S.set({ searchDebounceMs: 5, searchMinChars: 99, boardRefreshSec: 1e6, columns: false, theme: 'dark' });
   assert.equal(next.searchDebounceMs, 100, 'debounce floor');
@@ -287,7 +291,118 @@ test('column work follows the columns setting', async t => {
   s.changed({ ...defaults, columns: true });
   await tick(w, 80);
   assert.ok(w.document.querySelector('#ubif-plus-columns'), 'control appears without a reload');
+  s.changed({ ...defaults, columns: true, columnsWorkorders: false });
+  await tick(w, 80);
+  assert.equal(w.document.querySelector('#ubif-plus-columns'), null, 'workorder-specific toggle restores the native table');
+  s.changed({ ...defaults, columns: true, columnsWorkorders: true });
+  await tick(w, 80);
+  assert.ok(w.document.querySelector('#ubif-plus-columns'), 'workorder controls can be re-enabled independently');
   s.changed({ ...defaults, columns: false });
   await tick(w, 80);
   assert.equal(w.document.querySelector('#ubif-plus-columns'), null, 'control removed again');
+});
+
+test('settings navigation, search, dependencies, reset and external edits stay in sync', async t => {
+  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html#scanner', runScripts: 'outside-only' });
+  t.after(() => dom.window.close());
+  const w = dom.window, doc = w.document;
+  const s = storage(w, { [KEY]: { scannerOEMConfirm: false, search: false } });
+  let opened = false;
+  w.chrome.runtime.openOptionsPage = () => { opened = true; };
+  w.eval(settingsScript); w.eval(popupScript); await tick(w);
+  assert.equal(doc.querySelector('#scanner').hidden, false);
+  assert.equal(doc.querySelector('#search').hidden, true);
+  assert.equal(doc.querySelector('[data-key=scannerSearch]').disabled, true);
+  const filter = doc.querySelector('#settings-search');
+  filter.value = 'notification'; filter.dispatchEvent(new w.Event('input'));
+  assert.equal(doc.querySelector('#support').hidden, false);
+  assert.equal(doc.querySelector('#scanner').hidden, true);
+  filter.value = 'no such setting'; filter.dispatchEvent(new w.Event('input'));
+  assert.equal(doc.querySelector('#no-results').hidden, false);
+  doc.querySelector('[data-section=scanner]').click();
+  assert.equal(filter.value, '');
+  assert.equal(doc.querySelector('#scanner').hidden, false);
+  doc.querySelector('[data-reset=scanner]').click(); await tick(w);
+  assert.equal(s.data[KEY].scannerOEMConfirm, true);
+  assert.equal(s.data[KEY].search, false, 'section reset preserves unrelated preferences');
+  s.changed({ ...s.data[KEY], scannerReceiving: false });
+  assert.equal(doc.querySelector('[data-key=scannerOEMConfirm]').disabled, true);
+  assert.equal(doc.querySelector('[data-key=scannerOpenLinks]').disabled, false);
+  s.fail(true);
+  const control = doc.querySelector('[data-key=scannerOpenLinks]');
+  control.checked = false; control.dispatchEvent(new w.Event('change')); await tick(w);
+  assert.equal(control.checked, true, 'failed writes restore the displayed saved value');
+  doc.querySelector('#open-settings').click();
+  assert.equal(opened, true);
+  assert.equal(manifest.options_ui.page, 'popup.html');
+});
+
+test('disabled search categories make no requests and new-tab preference reaches results', async t => {
+  const dom = page('<header><div class="components-header-searchbox"><button>Search</button></div></header>');
+  t.after(() => dom.window.close());
+  const w = dom.window, calls = [];
+  w.fetch = async path => { calls.push(path); return { ok: true, json: async () => [{ itemNumber: '123', name: 'Part' }] }; };
+  const s = storage(w, { [KEY]: { searchCustomers: false, searchWorkOrders: false, searchClaims: false, searchSerials: false, searchNewTab: true } });
+  w.eval(settingsScript); w.eval(searchModel); w.eval(searchScript); await tick(w);
+  w.UBIFPlusSearchUI.run('123456'); await tick(w);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0], /available-parts/);
+  assert.equal(w.document.querySelector('#ubif-search-results a').target, '_blank');
+  s.changed({ ...s.data[KEY], searchItems: false }); await tick(w);
+  assert.equal(calls.length, 1, 'switching all categories off cancels further search');
+  assert.match(w.document.querySelector('#ubif-search-results').textContent, /All search categories are off/);
+});
+
+test('board preferences hide empty lanes, disable dragging, and stop periodic refresh', async t => {
+  const dom = page('<main><nav role="tablist"><button role="tab">Ready for pickup</button></nav><table><thead><tr><th data-column-id="woId">WO</th></tr></thead></table></main>', 'https://portal.ubreakifix.net/repair/workorders');
+  const w = dom.window;
+  t.after(() => w.close());
+  const timers = new Set();
+  let apply;
+  const interval = w.setInterval.bind(w);
+  const clear = w.clearInterval.bind(w);
+  w.setInterval = (fn, delay) => { const id = interval(fn, delay); if (delay >= 15000) timers.add(id); return id; };
+  w.clearInterval = id => { timers.delete(id); clear(id); };
+  w.UBIFPlusSettings = { get: () => Promise.resolve({ board: true, boardAutoRefresh: false, boardShowEmpty: false, boardDragDrop: false }), subscribe: fn => { apply = fn; } };
+  w.fetch = async () => ({ ok: true, json: async () => ({ workOrders: [{ workorderId: 12345, workorderStatusId: 2, nextUpdate: '2000-01-01T12:00:00', customer: { fullName: 'Test' } }], rowCount: 1 }) });
+  w.eval(boardModel); w.eval(boardScript); await tick(w);
+  w.document.querySelector('#ubif-update-today-tab').click(); await tick(w);
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  assert.equal(root.querySelectorAll('.lane').length, 1);
+  assert.equal(root.querySelector('.card').draggable, false);
+  assert.equal(timers.size, 0);
+  apply({ board: true, boardAutoRefresh: true, boardShowEmpty: true, boardDragDrop: true });
+  assert.ok(root.querySelectorAll('.lane').length > 1);
+  assert.equal(root.querySelector('.card').draggable, true);
+  assert.equal(timers.size, 1);
+});
+
+test('Updates and help supports navigation, search, external links and explicit extension reload', async t => {
+  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html#updates', runScripts: 'outside-only' });
+  t.after(() => dom.window.close());
+  const w = dom.window, doc = w.document;
+  const s = storage(w);
+  let reloads = 0;
+  w.chrome.runtime.reload = () => { reloads++; };
+  w.eval(settingsScript); w.eval(popupScript); await tick(w);
+  assert.equal(doc.querySelector('#updates').hidden, false);
+  assert.equal(doc.querySelector('#preview-note').hidden, true);
+  assert.equal(reloads, 0, 'opening settings never reloads the extension');
+  doc.querySelector('#reload-extension').click();
+  assert.equal(reloads, 1);
+  const links = [...doc.querySelectorAll('#updates [data-external]')];
+  links.forEach(link => link.click());
+  assert.deepEqual(s.opened, links.map(link => link.href));
+  const search = doc.querySelector('#settings-search');
+  search.value = 'git'; search.dispatchEvent(new w.Event('input'));
+  assert.equal(doc.querySelector('#updates').hidden, false);
+  assert.equal(doc.querySelector('#no-results').hidden, true);
+});
+
+test('localhost preview cannot reload the installed extension', async t => {
+  const dom = new JSDOM(popupHtml, { url: 'http://localhost/extension/popup.html#updates', runScripts: 'outside-only' });
+  t.after(() => dom.window.close());
+  dom.window.eval(settingsScript); dom.window.eval(popupScript); await tick(dom.window);
+  assert.equal(dom.window.document.querySelector('#reload-extension').disabled, true);
+  assert.equal(dom.window.document.querySelector('#preview-note').hidden, false);
 });

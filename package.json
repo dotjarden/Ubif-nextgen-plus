@@ -1,12 +1,19 @@
 {
   "name": "ubif-nextgen-plus",
-  "version": "0.1.0",
+  "version": "0.8.2",
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "check": "node --check extension/model.js && node --check extension/content.js && node --check extension/page.js && node --check extension/search-model.js && node --check extension/search.js && node --check extension/scanner.js && node --check extension/board-model.js && node --check extension/board.js && node --check extension/settings.js && node --check extension/home.js && node --check extension/popup.js && node --check demo/live-load.js && node --check demo/server.cjs"
+    "check": "node --check extension/model.js && node --check extension/content.js && node --check extension/page.js && node --check extension/search-model.js && node --check extension/search.js && node --check extension/scanner.js && node --check extension/board-model.js && node --check extension/board.js && node --check extension/settings.js && node --check extension/home.js && node --check extension/popup.js && node --check extension/support.js && node --check extension/background.js && node --check demo/live-load.js && node --check demo/server.cjs && node --check scripts/update.cjs && node --check scripts/sync-version.cjs",
+    "update": "node scripts/update.cjs",
+    "update:check": "node scripts/update.cjs --check",
+    "package": "npm run check && npm test && python3 scripts/package.py",
+    "version": "node scripts/sync-version.cjs"
   },
   "devDependencies": {
     "jsdom": "^26.1.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

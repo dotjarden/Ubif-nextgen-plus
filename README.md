@@ -1,131 +1,139 @@
-# UBIF NextGen Plus
+<div align="center">
+  <img src="extension/icons/icon-128.png" width="88" height="88" alt="UBIF NextGen Plus icon">
+  <h1>UBIF NextGen Plus</h1>
+  <p><strong>Less clicking. Faster lookups. A portal that works your way.</strong></p>
+  <p>Universal search, barcode scanning, custom tables, a daily update board, and a movable support chat for the UBIF portal.</p>
+  <p><a href="#install">Install</a> · <a href="#update">Update</a> · <a href="CHANGELOG.md">Changelog</a> · <a href="https://github.com/dotjarden/Ubif-nextgen-plus/issues">Request a feature</a> · <a href="https://www.buymeacoffee.com/jarden">Buy me a coffee</a></p>
+</div>
 
-Chrome Manifest V3 extension for `https://portal.ubreakifix.net`.
+---
 
-## Settings (0.7.0)
+Built for Chrome and `portal.ubreakifix.net`. Runs inside your existing portal session, with no additional account or subscription. This is an independent extension, not an official UBIF or Asurion product.
 
-Click the extension's toolbar icon to open settings. Each control saves immediately and applies to portal tabs that are already open — no reload needed.
+## What you get
 
-- **Features**: switch Universal search, the Update Today board, Barcode scanning, and Custom columns off or back on.
-- **Hide Home calendar**: hides the Arrivals schedule the portal pins to the right of the Home page, so Quick actions and Today's to-do's take the full width. Off by default; the calendar is only marked, never removed, so switching it back on needs no reload.
-- **Universal search**: the Cmd/Ctrl + K hotkey, the delay before a search runs (100–2,000 ms, 350 ms by default), and the minimum query length (3–10 characters, 3 by default).
-- **Update Today board**: the auto-refresh interval (15–600 seconds, 60 by default) and whether **Include tomorrow** starts checked.
-- **Feature request** and **Buy me a coffee** open their links in a new tab.
+| Feature | What it does |
+| --- | --- |
+| **Universal search** | Search customers, work orders, items, claims, and inventory serials from the portal header. Press **Cmd/Ctrl + K** to start. |
+| **Barcode scanning** | Open work orders, follow portal QR links, send other scans to search, and scan repeatedly during purchase-order receiving. |
+| **Update Today** | See active work orders due today or earlier, read/add notes, schedule the next update, and prepare supported status changes. |
+| **Custom columns** | Show, hide, reorder, and resize Workorders and Arrivals columns. Save a separate layout for each view. |
+| **Support chat** | Move and minimize chat while keeping the portal usable; recover supported sessions and receive configurable unread alerts. |
+| **Your preferences** | 30 controls across six feature categories, searchable settings, per-category resets, and a full-page settings view. |
 
-Turning a feature off restores the portal's own UI for it: the native search field returns, the Update Today tab disappears, scans fall back to Portal behavior, the Columns control is removed, and the Home calendar reappears. Portal-imposed minimums still apply — a lower search minimum never lets you query work orders with fewer than 5 digits or claims with fewer than 6 characters.
+Want the details? Read the [feature guide](docs/FEATURES.md), including keyboard controls, scanning rules, column behavior, and support-session limits.
 
-Settings live in one storage record (`ubif-plus.settings.v1`) written by the popup and read by `settings.js`, which every content script loads first.
+## Install
 
-## Update Today board (0.5.0)
+### From Git
 
-Open **Workorders → Update Today**, beside **Ready for pickup**, for active orders due today or earlier. Select **Include tomorrow** to expand the queue.
+Install [Git](https://git-scm.com/downloads), then clone the project into a folder you intend to keep:
 
-- Change the next update date/time without changing WO status. Use **In 2 days** or enter a parts arrival date.
-- Drag to **Need to order**, **Awaiting item**, **Awaiting callback**, or **Ready for work**, then save with a date and note. Other transitions use the full Portal workflow.
-- Read and add Portal notes. The board refreshes every minute while visible and on focus.
+```sh
+git clone https://github.com/dotjarden/Ubif-nextgen-plus.git
+cd Ubif-nextgen-plus
+```
 
-Dates use the displayed browser timezone. Orders without update dates are excluded. The picker has no three-day limit, but Portal validates saves. Failed or partial saves are reported; stale orders must be refreshed before saving.
+1. Open `chrome://extensions` in Chrome and turn on **Developer mode**.
+2. Choose **Load unpacked**, then select the repository's **extension** folder—not the repository root.
+3. Refresh your portal tabs, then pin **UBIF NextGen Plus** from Chrome's Extensions menu.
+4. Click the toolbar icon to configure the extension.
 
-Tests and local preview pass. Live Portal writes still need verification.
+No build or npm install is needed to use the extension. Node.js is only needed for the optional update helper and development tools.
 
-## Scan purchase-order receiving labels without clicking
+### Without Git
 
-On `/boh/inventory/purchase-orders/<order>/receive`, scan part labels repeatedly with a keyboard-mode scanner ending in **Enter** or **Tab**. You do not need to click the scan area between labels. The portal tab must be active.
+Download the repository using **Code → Download ZIP**, or use an extension ZIP from [Releases](https://github.com/dotjarden/Ubif-nextgen-plus/releases) when one is published.
 
-Rapid scans are delivered to the portal's existing `scanDetected` handler. The portal retains its serial matching, duplicate checks, access checks, OEM/IMEI prompts, and **Receive Parts** confirmation. Scans on this page never navigate to work orders. When the **Scan OEM Serial** popup opens, its input receives focus automatically. Scan the OEM serial and press **Enter** (or use the scanner’s Enter/Tab suffix) to validate it and activate the portal’s enabled **Confirm** button. Invalid serials stay in the popup for correction. Other dialogs keep their native scanning behavior; ordinary typing is unchanged. If a scan lands in an input or textarea, the previous value and selection are restored.
+Extract it into a permanent folder and follow steps 1–4 above. Source downloads contain an `extension` subfolder; packaged release ZIPs put `manifest.json` directly in the extracted folder. Load the folder containing that file. Keep it in place—Chrome reads the extension from there.
 
-The adapter targets the observed `po-receive-container` markup and `scanDetected` event contract from the portal's public frontend code. Automated tests cover repeated scans, Enter/Tab, field restoration, dialog/loading guards, OEM focus and confirmation, invalid OEM serials, and route changes. A physical scanner check on the live receiving page is still needed.
+## Update
 
-## Scan to open a work order, or search anything else (0.7.0)
+### Git installation
 
-Scan a work-order barcode on portal pages outside purchase-order receiving to open that work order in the same tab. No search-field focus is required. Supports a plain 5–10 digit work-order number (for example `30787644`), a full `https://portal.ubreakifix.net/repair/workorder/30787644` URL, the same URL without `https://`, or `/repair/workorder/30787644`.
+From your existing checkout:
 
-Every other rapid scan is routed instead of dropped: an item barcode, an IMEI or serial number, a phone number, a claim reference or a name is handed to universal search, which opens with that value already typed and its results panel showing; the scanner's **Enter** is consumed so the panel stays open. A portal QR code for any other route — an item, a purchase order, a customer — opens that route. External links, prose-like text, very short values and ordinary typing are left alone, and with Universal search or Barcode scanning switched off a scan behaves like ordinary keystrokes again.
+```sh
+npm run update
+```
 
-Use a keyboard-mode barcode scanner configured to end each scan with **Enter** or **Tab**. Detection requires a rapid burst (at most 80 ms between keys and a 40 ms average including the terminator). Ordinary typing retains its normal behavior. When scanning into an input or textarea, its previous value and selection are restored before navigation or search. Outside purchase-order receiving, other barcode types still use the portal's existing workflows. Scanning inside an embedded frame is not supported.
+Requires Node.js 20+ and Git; no `npm install` is needed. The helper checks for local edits and a tracking branch, then performs a fast-forward-only pull. It does not discard changes, create merge commits, or execute downloaded install scripts. Use `npm run update:check` for a local readiness check without fetching or updating.
 
-Reload the extension and the portal to activate version **0.7.0**. Scanner routing is covered by automated tests; physical scanner timing still needs verification with your scanner.
+Prefer plain Git? Run `git pull --ff-only` in that same folder.
 
-## Universal search
+**After either command:** reload the extension at `chrome://extensions`, then refresh your portal tabs. Finish any unsaved portal work before refreshing.
 
-The portal header contains an always-visible **Search everything…** field on every page (when the portal collapses its own search box at narrow widths, the field parks in the visible header instead, so a scanned query and its results are always on screen). Type once to search Customers, Work orders, Items, Claims (including upcoming arrivals), and inventory Serial numbers. Results are grouped with direct links; there are no category tabs to select. Cmd/Ctrl+K focuses search, Enter searches immediately, arrows move through results, and Escape dismisses them. A barcode scan fills this field too — see [scanning](#scan-to-open-a-work-order-or-search-anything-else-070).
+### ZIP installation
 
-Search waits 350 ms after typing, cancels superseded requests, and keeps successful categories visible if another fails. Queries and results are held in memory only. It uses the same portal endpoints and input rules observed in R92.4: 3 characters for customers/items, 5 digits for workorders, 6 characters for claims, and the inventory serial pattern such as `I-1234567890` or `123456-1234567890`. Serial results link to their inventory product. This preserves the portal's existing inventory-serial coverage; it does not add a new device IMEI endpoint.
+Download the newer ZIP, extract it, and replace the contents of the **same extension folder** you originally loaded. Then reload the extension and refresh the portal. Keep the same installation to retain its settings and saved column layouts; do not remove and reinstall it as an update step.
 
-Appointment and Arrival results retain a plain type label. A unique customer match also loads their arrivals, matching regular portal search.
+### Can it update automatically?
 
-Authenticated customer, item, claim/workorder, and arrival endpoint response shapes were verified in Search.app. Automated tests use representative fixtures. The updated extension still needs reloading in the browser; its full live UI and serial results have not been verified.
+The current installation method is unpacked source: Git or ZIP updates the files, and Chrome must reload them. There is no automatic updater or Web Store listing configured here. Chrome Web Store distribution is the future path for browser-managed updates; GitHub Releases alone do not provide that behavior. See [Chrome's update lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/extensions-update-lifecycle).
 
-## Workorder and Arrivals columns
+Maintainers can create tested ZIPs and draft GitHub releases using the included [release workflow](docs/RELEASING.md).
 
-Arrivals rows size to their content without shrinking, preserve native avatar dimensions, and use wider default customer/device columns. The Columns control stays beside Add new.
+## Make it yours
 
-- Hover a table header to reveal its grip; drag it onto another header to reorder. Drag a header’s right edge to resize (100–600 px).
-- Keyboard: Tab to a header grip or resize separator, then use Left/Right arrows.
-- Open **Columns** beside **Device type** on Workorders or **Add new** on Arrivals. Every change applies immediately and is saved; the footer shows `shown of total` and the save state. **Done** closes the dialog — there is no Apply step.
-- Every Workorders tab and the Arrivals page has its own saved visibility, order, and widths. **Apply to all tabs** copies the current layout to the other Workorders tabs; Arrivals is a single view, so its dialog omits that button and its copy.
+Open the toolbar popup and choose a category—or use **Find a setting**. **Full settings** opens the same controls in a browser tab.
 
-### One catalog, no duplicates
+| Category | Available preferences |
+| --- | --- |
+| Home | Hide the Home calendar. |
+| Universal search | Enable search; choose result categories, shortcut, typing delay, minimum characters, and opening results in new tabs. |
+| Update Today | Enable the board; include tomorrow; configure periodic refresh, status dragging, and empty columns. |
+| Barcode scanning | Enable scanning; choose navigation, search forwarding, receiving, OEM field focus, and automatic confirmation. |
+| Table columns | Enable column customization for Workorders and Arrivals independently. Use **Columns** on each table for its layout. |
+| Support chat | Enable enhancements; choose desktop notifications, unread badges, and message previews. |
 
-Each column has a single logical id. When the portal’s own table renders a column — Device/Issue, Status, Program, Location, Total, Created, Last/Next update, Customer, WO # — that column appears in the dialog once, marked with a **table** badge and shown by default. When the current tab does not render it, the same column is offered as a data column (unchecked by default) filled from workorder data. A portal default such as **Device/Issue** or **Location** is therefore selectable on every tab, and a column never shows up twice.
+Changes save immediately and apply to open portal tabs. Disabled child controls retain their values until the parent feature is enabled again. Category resets preserve unrelated preferences and column layouts. **Updates & help** explains how to update your installation and links to release notes.
 
-Columns are grouped in the dialog as **Workorder**, **Program**, **Customer**, and **Device** (plus **Table** for headers this catalog does not recognise). Search filters the list, and the presets — *Portal only*, *Contact*, *Ops board*, *Everything* — apply live; the active preset stays highlighted. Presets never hide a column the table renders itself.
+A settings page served from `localhost` is a visual preview, not your installed extension's settings. Use the Chrome toolbar icon for changes that affect the portal.
 
-### Arrivals columns (0.7.0)
+## Privacy and permissions
 
-Arrivals has its own catalog aligned to the portal's own column list — **Program type**, **Appointment**, **Arrival status**, **Customer**, **Device** — with data columns **Arrival #**, **Client**, **Created**, **Updated**, **Missed arrival**, **Notes**, **Phone**, **Email**, **Contact prefs**, **Customer ID**, **City** and **Issues** available behind a click. Rows are matched to their records by customer name and email, so duplicated names still resolve to the right arrival.
+- **Storage:** settings, column layouts, and support-window position stay in extension-local storage.
+- **Notifications:** optional desktop alerts for hidden support messages. Disable previews if you prefer a generic notification.
+- **Portal access:** content scripts run on `https://portal.ubreakifix.net/*` and use your current session. Search and table data use portal APIs; board saves perform actions you request.
+- **Support recovery:** drafts and recovery state stay in the portal tab's session storage. Ended or expired support sessions cannot be revived.
+- **No added analytics or telemetry:** the extension does not send portal data to a third-party service. Project and donation links open only when you click them.
 
-Its dialog is grouped **Arrival**, **Customer**, **Device** (plus **Table** for headers this catalog does not recognise), its presets are *Portal only*, *Contact*, *Ops board*, *Everything*, and its copy describes arrival data rather than tabs. Data columns are filled from the portal's own `GET /api/arrivals/upcoming-arrivals` responses, forwarded the same way workorder data is; the extension never invents a value.
+For storage details, API behavior, and recovery boundaries, see [Scope and privacy](docs/FEATURES.md#scope-and-privacy).
 
-### Data columns
+## Troubleshooting
 
-Extra columns (Status, Service outcome, Location, Total, Phone with contact permission flags, Email, Serial/IMEI, Passcode set — shown as `Set`/`—`, never the code, Issues, Items with device, and so on) are read from the portal’s own `POST /api/workorders` responses. `extension/page.js` runs in the page world, observes those responses (and the arrivals list responses) and forwards the records to the content script; it never fabricates data. Clicking an extra header’s sort button sorts the rows on screen; clicking a portal header re-sorts through the portal and clears our order.
+| Symptom | Try this |
+| --- | --- |
+| New features do not appear | Reload the extension, then refresh the portal tab. Confirm Chrome loaded the folder you updated. |
+| A setting is grayed out | Enable its parent feature. Scan-to-search also requires universal search. |
+| Scans act like typing | Enable scanning; use a keyboard-mode scanner ending in Enter or Tab; keep the portal tab active. Embedded frames are not supported. |
+| Git update refuses to run | Commit or stash local changes. A detached checkout or branch without an upstream needs to be fixed before updating. The helper leaves your files alone. |
+| Search returns no results | Check enabled categories, query length, and portal login. Inventory serial search is not a general IMEI lookup API. |
+| Support does not reconnect | Confirm the portal session and support conversation are still active. File selections and uploads in progress are not restored. |
 
-The extension keeps the portal’s existing cells and event handlers. Reordering and column visibility use CSS placement so React still owns the original DOM, sorting and links remain attached to the original fields, and extra cells are only appended in rows whose cell count matches the header so the portal’s `nth-child` styling stays valid. Screen-reader and keyboard traversal of the table still follows source order, which can differ from visual order.
+## Development and verification
 
-### Appearance
-
-The dialog and injected cells use the portal’s own `--aui-*` design tokens (Apercu, 16 px dialog radius, pill buttons, `--aui-primary`, `--aui-scrim-overlay`), so it follows the portal’s light/dark theme automatically and looks native in both.
-
-## Install or update
-
-1. Open Chrome’s extension manager (`chrome://extensions`).
-2. Enable Developer mode, choose **Load unpacked**, and select the `extension` folder in this project.
-3. Reload the portal. Open Workorders or Arrivals.
-4. Click the extension’s icon in the toolbar to open its settings.
-
-After a source change, reload the extension in the extension manager, then reload the portal page. Search’s unpacked-extension support is browser-specific; the packaged target is Chrome.
-
-No build step or runtime dependencies. All files in `extension/` are needed, including `board-model.js`, `board.js`, `settings.js`, and `popup.js`.
-
-## Scope and privacy
-
-The content script loads on this portal host to handle client-side navigation from other portal pages, with universal search active wherever the portal header is present. Column enhancements activate only on `/repair/workorders` and `/check-in/arrivals`. The only permission requested is `storage`.
-
-- Column ids, visibility, order, widths, and sort are saved in extension-local storage under `ubif-plus.columns.v1.*`.
-- Feature toggles and timing preferences are saved in extension-local storage under `ubif-plus.settings.v1` and are written only by the popup.
-- The popup’s **Feature request** and **Buy me a coffee** links open in a new tab when you click them; the extension itself makes no external requests.
-- `page.js` only *reads responses the portal already made* (`POST /api/workorders` and `GET /api/arrivals/upcoming-arrivals`) and forwards them to the content script with `postMessage`. It does not send data anywhere.
-- If a response is missed (for example the content script loaded late), the content script may re-issue the portal’s **own last captured request body once**, unchanged, to fill the visible cells. No new queries, no other endpoints, no credentials or customer data leave the page.
-- Universal search sends read-only queries to the portal’s same-origin `/api/customers`, `/api/workorders` (POST lookup), `/api/repair/available-parts`, `/api/arrivals/upcoming-arrivals`, `/api/customers/<id>/arrivals` for a unique customer match, and `/api/boh/inventory/<serial>` endpoints using the existing session. Search results do not overwrite the column data feed.
-- The Update Today board reads current-store work orders and notes and writes user-requested dates, supported status changes, workflow resets and notes through same-origin Portal APIs.
-- No analytics, no telemetry, no third-party requests.
-
-Only columns this catalog knows are offered as data columns; the adapter reads the observed `table > thead > tr > th[data-column-id]` structure for the portal-rendered set, and unknown headers still appear (grouped under **Table**) without invented fields. Portal markup changes may require an adapter update.
-
-Implementation references: [Chrome content scripts](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts) and [Chrome storage](https://developer.chrome.com/docs/extensions/reference/api/storage).
-
-## Verification
+Requires Node.js 20+, Git, and Python 3 (used by distribution tests and packaging).
 
 ```sh
 npm ci
-npm test
 npm run check
+npm test
+npm run package
+```
+
+`npm run package` reruns checks/tests and writes a versioned extension ZIP and SHA-256 checksum to `dist/`. Only extension assets are included; source notes, demo data, and development dependencies stay out of the ZIP.
+
+For the fictional-data portal preview:
+
+```sh
 node demo/server.cjs
 ```
 
-Open `http://127.0.0.1:8765` for a preview using fictional records and the same extension files. The preview uses localStorage to simulate extension storage; production uses `chrome.storage.local`.
+Open `http://127.0.0.1:8765`. Automated tests cover settings persistence, live toggles, search, scan routing, tables, board behavior, and support recovery. Tests use simulated browser and portal behavior: physical scanner timing, live board writes, and live support reconnection still need checks in the authenticated portal. Portal markup changes may require an adapter update.
 
-The suite covers the column catalog and grouping, live apply and persistence, per-tab layouts across table replacements, reloads and SPA route changes, reset/show-all, last-column guard, layout migration from pre-logical-id saves, write failure feedback, external preference changes, unrelated tables, content-script reinjection, header drag versus portal sorting, native filter placement (including nested dropdown wrappers), Arrivals independence and its portal-aligned catalog (groups, presets, no apply-to-all), data columns (opt-in, formatting, placeholders, colspan rows, sorting), presets, search (including its header fallback), scan routing (work order, universal search, portal QR, prose left alone), the Home calendar setting, the `page.js` workorders and arrivals feeds, and settings (defaults, clamping, one-key persistence, live change propagation, popup wiring and writes, and every feature honoring its toggle).
+## Feedback and support
 
-Checked manually against the authenticated portal: every Workorders tab lists all 24 columns exactly once with the portal defaults tagged **table**, data columns fill from real workorder responses, the Arrivals dialog offers 17 arrival columns in Arrival/Customer/Device groups with its data cells filled from real `upcoming-arrivals` responses, a work-order scan opens the work order while any other scan lands in universal search, the Home calendar disappears and reappears with its setting, and the dialog renders correctly in both `asurion-light` and `asurion-dark`.
+[**Request a feature or report a bug**](https://github.com/dotjarden/Ubif-nextgen-plus/issues) with the extension version, affected portal page, what you expected, and steps to reproduce. Redact customer details, serials, credentials, and chat transcripts from examples.
+
+If the extension saves you time, [**buy me a coffee**](https://www.buymeacoffee.com/jarden). Contributions are optional; all features remain available.

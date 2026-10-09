@@ -2,9 +2,10 @@
   "manifest_version": 3,
   "name": "UBIF NextGen Plus",
   "description": "Update Today work order board, Portal notes and scheduling, scanning, universal search, and custom columns.",
-  "version": "0.7.0",
+  "version": "0.8.2",
   "permissions": [
-    "storage"
+    "storage",
+    "notifications"
   ],
   "content_scripts": [
     {
@@ -30,7 +31,8 @@
         "search-model.js",
         "search.js",
         "board-model.js",
-        "board.js"
+        "board.js",
+        "support.js"
       ],
       "run_at": "document_idle"
     }
@@ -41,6 +43,9 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_title": "UBIF NextGen Plus settings",
     "default_popup": "popup.html",
@@ -50,5 +55,9 @@
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
     }
+  },
+  "options_ui": {
+    "page": "popup.html",
+    "open_in_tab": true
   }
 }

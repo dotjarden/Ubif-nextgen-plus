@@ -12,7 +12,7 @@
   document.querySelectorAll('table[data-ubif-plus]').forEach(table => table.removeAttribute('data-ubif-plus'));
   let profiles = {}, ready = false, storageError = false, current = null, pending = false, suspended = false;
   const S = globalThis.UBIFPlusSettings;
-  let columnsEnabled = true;
+  let columnsEnabled = true, columnSettings = {};
   let writeQueue = Promise.resolve();
   // Records arrive from the portal's own /api/workorders responses (see page.js).
   const feed = {
@@ -836,7 +836,7 @@
     observer.disconnect();
     try {
       const kind = pageKind();
-      if (!ready || !columnsEnabled || !kind || document.documentElement.hasAttribute('data-ubif-board-active')) { cleanup(); return; }
+      if (!ready || !columnsEnabled || !kind || (kind === 'workorders' && columnSettings.columnsWorkorders === false) || (kind === 'arrivals' && columnSettings.columnsArrivals === false) || document.documentElement.hasAttribute('data-ubif-board-active')) { cleanup(); return; }
       const found = discover();
       if (!found) { cleanup(); return; }
       const tab = tabName(kind);
@@ -861,7 +861,7 @@
   chrome.storage.local.get(null).then(data => { profiles = data || {}; }, () => { storageError = true; }).finally(() => { ready = true; schedule(); });
   // The toolbar popup toggles the column work without a reload.
   if (S) {
-    const apply = settings => { columnsEnabled = settings.columns !== false; schedule(); };
+    const apply = settings => { columnSettings = settings; columnsEnabled = settings.columns !== false; schedule(); };
     S.get().then(apply, () => {});
     S.subscribe(apply);
   }

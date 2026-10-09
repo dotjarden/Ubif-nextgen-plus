@@ -7,7 +7,7 @@
   // Timing is deliberately conservative so normal typing keeps its native behavior.
   const MAX_GAP = 80, MAX_AVERAGE = 40, MAX_LENGTH = 200;
   const S = globalThis.UBIFPlusSettings;
-  let enabled = true;
+  let enabled = true, config = {}, settingsReady = !S;
   let buffer = '', started = 0, last = 0, target = null, original = null, route = '';
   function reset() { buffer = ''; started = last = 0; target = original = null; route = ''; }
   function receiving() {
@@ -21,14 +21,14 @@
       dialog.getAttribute('aria-label') === 'Scan OEM Serial') || null;
   }
   function syncOEM() {
-    if (!enabled) return;
+    if (!settingsReady || !enabled || config.scannerReceiving === false) return;
     const dialog = oemDialog();
     const input = dialog?.querySelector('input[type="text"]:not(:disabled)');
     if (input !== focusedOEM) {
       focusedOEM = input || null;
-      if (input) { reset(); input.focus(); }
+      if (input && config.scannerOEMFocus !== false) { reset(); input.focus(); }
     }
-    if (!pendingOEM) return;
+    if (!pendingOEM || config.scannerOEMConfirm === false) return;
     if (dialog !== pendingOEM.dialog || window.location.pathname !== pendingOEM.route) { pendingOEM = null; return; }
     const button = Array.from(dialog.querySelectorAll('button')).find(node => node.textContent.trim() === 'Confirm');
     // Wait for React to apply the portal's validation before using its action.
@@ -41,7 +41,7 @@
     childList: true, subtree: true, attributes: true,
     attributeFilter: ['role', 'aria-label', 'aria-hidden', 'hidden', 'open', 'disabled', 'aria-disabled', 'value']
   });
-  syncOEM();
+  if (!S) syncOEM();
   function looksLikeUrl(value) {
     return /^https?:\/\//i.test(value) || /^portal\.ubreakifix\.net\//i.test(value) || value.startsWith('/');
   }
@@ -93,6 +93,7 @@
   window.addEventListener('keydown', event => {
     if (!enabled || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) { reset(); return; }
     const isReceiving = receiving();
+    if (isReceiving && config.scannerReceiving === false) { reset(); return; }
     const oem = oemDialog();
     // A new interaction cancels any delayed confirmation from a previous scan.
     pendingOEM = null;
@@ -105,8 +106,8 @@
     if (buffer && (now - last > MAX_GAP || event.target !== target || route !== window.location.pathname)) reset();
     if (event.key === 'Enter' || event.key === 'Tab') {
       const rapid = buffer.length >= (isReceiving ? 4 : 5) && (now - started) / buffer.length <= MAX_AVERAGE;
-      const href = !isReceiving && rapid ? destination(buffer) : null;
-      const query = !isReceiving && rapid && !href ? searchTarget(buffer) : null;
+      const href = !isReceiving && rapid && config.scannerOpenLinks !== false ? destination(buffer) : null;
+      const query = !isReceiving && rapid && !href && config.scannerSearch !== false ? searchTarget(buffer) : null;
       const searched = Boolean(query) && toSearch(query);
       if (href || searched || (isReceiving && rapid)) {
         event.preventDefault();
@@ -119,7 +120,7 @@
         // delivering the same scan twice. Validation and Receive Parts stay native.
         if (isReceiving) {
           window.dispatchEvent(new CustomEvent('scanDetected', { detail: { scan } }));
-          if (oem && /^[0-9A-Za-z]{14,22}$/.test(scan)) {
+          if (oem && config.scannerOEMConfirm !== false && /^[0-9A-Za-z]{14,22}$/.test(scan)) {
             const pending = { dialog: oem, scan, route: window.location.pathname };
             pendingOEM = pending;
             window.setTimeout(syncOEM, 0);
@@ -147,7 +148,12 @@
   // working before it does.
   if (S) {
     const apply = settings => {
+      if (!settingsReady || ['scanner', 'scannerReceiving', 'scannerOEMFocus'].some(key => config[key] !== settings[key])) focusedOEM = null;
+      settingsReady = true;
+      config = settings;
       enabled = settings.scanner !== false;
+      pendingOEM = null; reset();
+      syncOEM();
       if (!enabled) { pendingOEM = null; reset(); }
     };
     S.get().then(apply, () => {});

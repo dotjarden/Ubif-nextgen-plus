@@ -4,7 +4,7 @@ const { JSDOM } = require('jsdom');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const script = fs.readFileSync(`${__dirname}/../extension/scanner.js`, 'utf8');
-function boot(t) {
+function boot(t, settings) {
   const dom = new JSDOM('<input value="existing note"><textarea>previous text</textarea><button>Save</button>', { url: 'https://portal.ubreakifix.net/repair/workorders' });
   const observers = [];
   class Observer extends dom.window.MutationObserver {
@@ -13,7 +13,10 @@ function boot(t) {
   t.after(() => { observers.forEach(observer => observer.disconnect()); dom.window.close(); });
   const w = dom.window, navigations = [];
   const context = vm.createContext({ window: { setTimeout: w.setTimeout.bind(w), addEventListener: w.addEventListener.bind(w), dispatchEvent: w.dispatchEvent.bind(w), location: { get pathname() { return w.location.pathname; }, assign: href => navigations.push(href) } }, document: w.document, MutationObserver: Observer, URL: w.URL, Event: w.Event, CustomEvent: w.CustomEvent, HTMLInputElement: w.HTMLInputElement, HTMLTextAreaElement: w.HTMLTextAreaElement });
+  let applySettings;
+  if (settings) context.UBIFPlusSettings = { get: () => Promise.resolve(settings), subscribe: fn => { applySettings = fn; } };
   vm.runInContext(script, context);
+  if (settings) applySettings(settings);
   let time = 100;
   function key(key, target = w.document.body, delay = 10, extras = {}) {
     time += delay;
@@ -257,4 +260,28 @@ test('without a working search field the portal keeps the keystrokes', t => {
   b.context.UBIFPlusSearchUI = { run: () => false };
   assert.equal(b.scan('4902567890123').defaultPrevented, false, 'search refused the query');
   assert.deepEqual(b.navigations, []);
+});
+
+
+test('scanner workflow controls preserve native input when disabled', async t => {
+  const b = boot(t, { scannerOpenLinks: false, scannerSearch: false, scannerReceiving: false });
+  assert.equal(b.scan('30787644').defaultPrevented, false);
+  assert.deepEqual(b.navigations, []);
+  const queries = withSearch(b);
+  assert.equal(b.scan('I-1234567890').defaultPrevented, false);
+  assert.deepEqual(queries, []);
+  const { scans } = receive(b);
+  assert.equal(b.scan('12345678').defaultPrevented, false);
+  assert.deepEqual(scans, []);
+});
+
+test('OEM scan can require manual confirmation and leave focus alone', async t => {
+  const b = boot(t, { scannerOEMConfirm: false, scannerOEMFocus: false }); receive(b);
+  await Promise.resolve();
+  const modal = showOEM(b);
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.notEqual(b.w.document.activeElement, modal.input);
+  b.scan('ABCDEFGHIJKLMN', { target: modal.input });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(modal.confirmed, 0);
 });
