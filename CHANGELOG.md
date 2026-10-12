@@ -6,7 +6,7 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Added
 
-- Extra Details above the native Additional Details section on standard and Samsung diagnosis forms: Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est. Entries join existing Notes / Additional Details and save through the normal check-in workflow. ETA accepts a time, date or “unsure.” A “Battery not working” shortcut above native diagnosis categories selects “No issues” for each category and preserves Extra Details.
+- Extra Details above the native Additional Details section on standard and Samsung diagnosis forms: Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est. Entries join existing Notes / Additional Details and save through the normal check-in workflow. ETA accepts a time, date or “unsure.” A “Battery not working” shortcut below the diagnosis heading selects “Can’t test” for every native category and fills required test-reason notes, opening collapsed categories when needed. The button leaves Extra Details untouched and no longer shows the Quick diagnosis label or explanatory paragraph. Autofilled notes use plain “Extra Details:” text without extension branding. All eight Extra Details fields are required before continuing diagnosis; the battery shortcut discovers all sibling categories even when an inner render exposes only Hardware. Selection confirmation resolves React’s current committed tree to avoid stopping after Hardware on a stale render.
 
 - Add inline Print buyback buttons beside item and sold serial search results, a sold-serial chooser, and a Universal search setting to show or hide the buttons. Printing uses the linked work order’s native action.
 
