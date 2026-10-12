@@ -6,6 +6,8 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Added
 
+- Extra Details above the native Additional Details section on standard and Samsung diagnosis forms: Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est. Entries join existing Notes / Additional Details and save through the normal check-in workflow. ETA accepts a time, date or “unsure.” A “Battery not working” shortcut above native diagnosis categories selects “No issues” for each category and preserves Extra Details.
+
 - Add inline Print buyback buttons beside item and sold serial search results, a sold-serial chooser, and a Universal search setting to show or hide the buttons. Printing uses the linked work order’s native action.
 
 - Customer message templates inside the Messages sidebar: create, edit and delete locally saved templates, insert customer/device/work order/appointment fields with optional fallback text, and personalize a real-data preview before inserting into the Portal composer.

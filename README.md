@@ -19,6 +19,7 @@ Built for Chrome and `portal.ubreakifix.net`. Runs inside your existing portal s
 | **Universal search** | Search customers, work orders, items, claims, and inventory serials from the portal header. Press **Cmd/Ctrl + K** to start. |
 | **Buyback labels** | Print inline with an item or sold serial search result; choose a sold serial when there are several. |
 | **Barcode scanning** | Open work orders, follow portal QR links, send other scans to search, and scan repeatedly during purchase-order receiving. |
+| **Extra Details** | Add Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est to diagnosis. Saved with the order’s native Notes / Additional Details. |
 | **Update Today** | See active work orders due today or earlier, read/add notes, schedule the next update, and prepare supported status changes. |
 | **Custom columns** | Show, hide, reorder, and resize Workorders and Arrivals columns. Save a separate layout for each view. |
 | **Support chat** | Move and minimize chat while keeping the portal usable; recover supported sessions and receive configurable unread alerts. |

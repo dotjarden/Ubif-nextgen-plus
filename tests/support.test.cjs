@@ -329,7 +329,7 @@ test('the widget is still styled when animation frames are suspended', async t =
 });
 
 test('the script loads on every portal page after the settings module', () => {
-  assert.deepEqual(manifest.content_scripts[0].js, ['page.js', 'messages-page.js', 'arrivals-page.js', 'buyback-page.js']);
+  assert.deepEqual(manifest.content_scripts[0].js, ['page.js', 'messages-page.js', 'arrivals-page.js', 'buyback-page.js', 'checkin.js']);
   const scripts = manifest.content_scripts[1].js;
   assert.equal(scripts[0], 'settings.js', 'settings load before the consumers');
   assert.equal(scripts.includes('support.js'), true);

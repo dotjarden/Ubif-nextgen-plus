@@ -16,7 +16,8 @@
         "page.js",
         "messages-page.js",
         "arrivals-page.js",
-        "buyback-page.js"
+        "buyback-page.js",
+        "checkin.js"
       ],
       "run_at": "document_start",
       "world": "MAIN"
