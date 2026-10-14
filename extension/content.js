@@ -20,6 +20,9 @@
     // The portal's arrivals list: one record per arrival, replaced on page 1.
     arrivals: new Map(), arrivalsUrl: null, arrivalsFetching: false, arrivalsTried: false
   };
+  const lineItems = new WeakMap();
+  let itemRequests = 0;
+  const withItems = record => record && lineItems.get(record)?.data ? { ...record, ...lineItems.get(record).data } : record;
   const style = document.createElement('style');
   style.id = 'ubif-plus-table-style';
   const element = (tag, text, attrs = {}) => {
@@ -55,7 +58,11 @@
   function discover() {
     for (const table of document.querySelectorAll('table')) {
       const heads = [...(table.tHead?.rows[0]?.cells || [])].filter(h => !h.dataset.ubifExtra);
-      const columns = heads.map(h => ({ portalId: h.dataset.columnId, label: h.textContent.trim() }));
+      const columns = heads.map(h => {
+        const copy = h.cloneNode(true);
+        copy.querySelectorAll('[data-ubif-handle]').forEach(node => node.remove());
+        return { portalId: h.dataset.columnId, label: copy.textContent.trim() };
+      });
       if (columns.length >= 2 && columns.every(c => c.portalId) && new Set(columns.map(c => c.portalId)).size === columns.length && table.tBodies[0]) {
         return { table, columns };
       }
@@ -95,7 +102,43 @@
     return catalog;
   }
   const defaultHiddenFor = catalog => catalog.filter(c => !c.native).map(c => c.id);
+  // Keep Portal's existing tooltip node and hover lifecycle, but lift its
+  // rendering into the browser top layer so scroll containers cannot clip it.
+  const liftedTooltips = new Map();
+  function restoreTooltip(node, saved) {
+    if (node.matches(':popover-open')) node.hidePopover();
+    for (const [name, value] of Object.entries(saved)) {
+      if (value === null) node.removeAttribute(name); else node.setAttribute(name, value);
+    }
+  }
+  function syncTooltips() {
+    for (const [node, saved] of liftedTooltips) {
+      if (!node.isConnected || !current?.table.contains(node)) {
+        restoreTooltip(node, saved); liftedTooltips.delete(node);
+      }
+    }
+    if (!current) return;
+    for (const node of current.table.querySelectorAll('[data-aui="tooltip"]')) {
+      if (typeof node.showPopover !== 'function') continue;
+      if (!liftedTooltips.has(node)) {
+        liftedTooltips.set(node, { style: node.getAttribute('style'), popover: node.getAttribute('popover') });
+        node.setAttribute('popover', 'manual');
+        for (const [key, value] of Object.entries({ position: 'fixed', inset: 'auto', margin: '0', transform: 'none', width: 'max-content', 'max-width': 'min(420px, calc(100vw - 24px))', 'max-height': 'calc(100vh - 24px)', overflow: 'auto', 'white-space': 'normal', opacity: '1', border: '0' })) node.style.setProperty(key, value, 'important');
+      }
+      if (!node.matches(':popover-open')) node.showPopover();
+      const anchor = node.parentElement.getBoundingClientRect();
+      const rect = node.getBoundingClientRect();
+      const left = Math.max(12, Math.min(anchor.left + (anchor.width - rect.width) / 2, innerWidth - rect.width - 12));
+      const top = Math.max(12, Math.min(anchor.top >= rect.height + 20 ? anchor.top - rect.height - 8 : anchor.bottom + 8, innerHeight - rect.height - 12));
+      node.style.setProperty('left', `${left}px`, 'important');
+      node.style.setProperty('top', `${top}px`, 'important');
+    }
+  }
+  addEventListener('scroll', syncTooltips, true);
+  addEventListener('resize', syncTooltips);
   function cleanup() {
+    for (const [node, saved] of liftedTooltips) restoreTooltip(node, saved);
+    liftedTooltips.clear();
     if (current) {
       current.events.abort();
       current.dialog.close();
@@ -153,7 +196,7 @@
   }
   function cellMarkup(col, record) {
     if (!record) return '<div class="ubif-x"><span class="ubif-x1 ubif-x-none">—</span></div>';
-    const { a, b } = col.display(record);
+    const { a, b } = col.display(withItems(record));
     const primary = escapeHtml(a || '') || '—';
     return `<div class="ubif-x"><span class="ubif-x1">${primary}</span>${b ? `<span class="ubif-x2">${escapeHtml(b)}</span>` : ''}</div>`;
   }
@@ -163,7 +206,8 @@
   /* Adds/removes the data cells this layout needs. React owns the rows, so this
      only ever touches cells marked as ours and never rewrites portal cells. */
   function syncCells() {
-    const { table, columns, catalog, layout, version } = current;
+    const { table, columns, catalog, layout } = current;
+    const version = feed.version;
     const wanted = layout.order.filter(id => !layout.hidden.includes(id) && catalog.some(c => c.id === id && c.extra));
     const head = table.tHead?.rows[0];
     if (!head) return;
@@ -189,15 +233,44 @@
       for (const id of wanted) if (!cellFor(row, id)) row.append(makeTd(id));
       park(row, [...row.cells]);
       const record = recordForRow(row);
+      if (record && wanted.includes('lineItems')) ensureLineItems(record);
       const stamp = `${record ? (record.workorderId ?? record.arrivalId ?? '') : ''}:${version}`;
       for (const id of wanted) {
         const td = cellFor(row, id);
         if (td && td.dataset.ubifStamp !== stamp) {
           td.innerHTML = cellMarkup(catalog.find(c => c.id === id), record);
+          const detail = record && catalog.find(c => c.id === id).display(withItems(record));
+          td.title = detail ? [detail.a, detail.b].filter(Boolean).join('\n') : '';
           td.dataset.ubifStamp = stamp;
         }
       }
     }
+  }
+  // Fetch cart details only for rows whose line-item column is visible. Keep
+  // data in memory and bind each result to the exact list record that requested it.
+  function ensureLineItems(record) {
+    if (Array.isArray(record.cartItems) || lineItems.has(record) || itemRequests >= 3 || typeof fetch !== 'function') return;
+    const state = current, ownerSignal = state.events.signal;
+    const controller = new AbortController(), signal = controller.signal;
+    const abort = () => controller.abort();
+    ownerSignal.addEventListener('abort', abort, { once: true });
+    const timeout = setTimeout(abort, 15000);
+    const entry = {}; lineItems.set(record, entry); itemRequests++;
+    const read = async path => {
+      const response = await fetch(path, { credentials: 'same-origin', signal });
+      if (!response.ok) throw new Error('Could not load line items');
+      return response.json();
+    };
+    (async () => {
+      const detail = record.csuCartId ? record : (await read(`/api/workorder/${encodeURIComponent(record.workorderId)}`)).workorder;
+      if (!detail) throw new Error('Missing work order');
+      const cart = detail.csuCartId ? await read(`/api/get-cart/${encodeURIComponent(detail.csuCartId)}?includePartStatus=true`) : { cartItems: [] };
+      if (!Array.isArray(cart.cartItems)) throw new Error('Missing cart items');
+      entry.data = { cartItems: cart.cartItems };
+    })().catch(() => {
+      if (ownerSignal.aborted) lineItems.delete(record);
+      else entry.data = { lineItemsState: 'Could not load line items. Refresh to retry.' };
+    }).finally(() => { clearTimeout(timeout); ownerSignal.removeEventListener('abort', abort); itemRequests--; feed.version++; schedule(); });
   }
   function makeTh(id) {
     const col = current.catalog.find(c => c.id === id);
@@ -219,7 +292,7 @@
     return td;
   }
 
-  function sortValueFor(col, record) { return record && col.sortValue ? col.sortValue(record) : ''; }
+  function sortValueFor(col, record) { return record && col.sortValue ? col.sortValue(withItems(record)) : ''; }
   function applySort() {
     if (!current) return;
     const { table, layout, catalog } = current;
@@ -351,17 +424,22 @@
     if (!style.isConnected) document.head.append(style);
     table.setAttribute('data-ubif-plus', '');
     attachHandles();
+    syncTooltips();
     applySort();
     const sort = layout.sort;
     for (const th of table.tHead.rows[0].cells) {
-      if (!th.dataset.ubifExtra) continue;
       const button = th.querySelector('[data-ubif-handle="sort"]');
-      const active = sort && sort.id === th.dataset.ubifExtra;
+      if (!button) continue;
+      const id = th.dataset.ubifExtra || columns.find(c => c.portalId === th.dataset.columnId)?.id;
+      const active = sort && sort.id === id;
       th.setAttribute('aria-sort', active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none');
       if (button) {
         const label = active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕';
         if (button.textContent !== label) button.textContent = label;
-        button.title = active ? 'Sorted. Click to reverse, click again to clear.' : 'Click to sort these rows.';
+        const dateSort = catalog.find(col => col.id === id)?.date;
+        button.title = dateSort
+          ? active ? `${sort.dir === 'asc' ? 'Oldest first' : 'Newest first'}. Click to reverse, then clear. Sorts loaded rows.` : 'Sort loaded rows: oldest first, newest first, then clear.'
+          : active ? 'Sorted. Click to reverse, click again to clear.' : 'Click to sort these rows.';
       }
     }
     for (const resize of table.querySelectorAll('[data-ubif-handle=resize]')) resize.setAttribute('aria-valuenow', String(Math.round(resize.parentElement.getBoundingClientRect().width)));
@@ -387,6 +465,9 @@
       || (state.columns.find(c => c.portalId === th.dataset.columnId) || {}).id
       || th.dataset.columnId;
     for (const th of state.table.tHead.rows[0].cells) {
+      const nativeSort = !th.dataset.ubifExtra && th.querySelector('[data-testid="sort-icon-asc"], [data-testid="sort-icon-desc"], .icon-triangle-up, .icon-triangle-down');
+      // Portal may add its sort controls after the initial header render.
+      if (nativeSort) th.querySelector('[data-ubif-handle="sort"]')?.remove();
       if (state.boundHeaders.has(th)) continue;
       state.boundHeaders.add(th);
       const id = keyOf(th);
@@ -445,11 +526,12 @@
       resize.addEventListener('pointerup', finish, {signal});
       resize.addEventListener('pointercancel', finish, {signal});
       th.append(grip, resize);
-      if (th.dataset.ubifExtra) {
+      if (th.dataset.ubifExtra || (!nativeSort && state.kind === 'workorders' && ['created', 'nextUpdate'].includes(id))) {
         const sortButton = element('button', '↕', { type: 'button', 'data-ubif-handle': 'sort', 'aria-label': `Sort rows by ${label}` });
         sortButton.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); cycleSort(id); }, {signal});
         th.append(sortButton);
-      } else {
+      }
+      if (!th.dataset.ubifExtra) {
         // A portal sort re-orders rows server side, so our own order is stale then.
         th.addEventListener('click', () => { if (state.layout.sort) { state.layout.sort = null; commitLayout(); } }, {signal});
       }

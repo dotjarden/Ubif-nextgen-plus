@@ -6,6 +6,17 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Added
 
+- Messages action in the Update Today editor opens Portal’s customer conversation beside the editor, preserving unsaved notes and scheduling fields. Portal owns history, templates, contact preferences and sending.
+- Oldest/newest sort buttons for Created and Next update on the WO table, with per-tab saved sort direction. Extension sorting applies to loaded rows; native header sorting remains available.
+- Optional Line items / SKUs work-order column. Visible rows load their cart details with bounded concurrency; column visibility, position and width use the existing saved layouts.
+
+### Fixed
+
+- Consecutive scans into universal search now retain and select the newest query instead of restoring and re-searching the first barcode. Numeric scans in the focused search field remain searches.
+- Inventory routes keep scans in their native workflow. Count editors receive one native scan event, including Tab-terminated scans, without opening universal search or work orders.
+- Include tomorrow now saves through shared settings. Data columns refresh when updated feed/cart data arrives.
+
+
 - Employee first-name template detail, RT iPhone and RT Android appointment confirmations, and a name button replacing the header profile icon while retaining its account menu. Settings include a first-name override.
 - Settings for message templates, quick template shortcuts, the employee label, check-in Extra Details, the battery diagnosis shortcut, and inline search result tags.
 

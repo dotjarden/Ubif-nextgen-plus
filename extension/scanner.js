@@ -64,6 +64,8 @@
   /* Portal part fields own their scans, including numeric SKUs that could
      otherwise be mistaken for work-order numbers. */
   function portalOwnsTarget() {
+    // Inventory pages own scans even when focus is on the page or a button.
+    if (/^\/boh\/inventory(?:\/|$)/.test(window.location.pathname)) return true;
     if (!target) return false;
     if (target.closest?.('#ubif-universal-search')) return false;
     // Inputs inside any open dialog belong to the portal's own workflow.
@@ -105,6 +107,8 @@
   window.addEventListener('keydown', event => {
     if (!enabled || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) { reset(); return; }
     const isReceiving = receiving();
+    const isCounting = /^\/boh\/inventory\/counts\/[^/]+\/edit\/?$/.test(window.location.pathname);
+    if (isCounting && document.querySelector(dialogSelector)) { reset(); return; }
     if (isReceiving && config.scannerReceiving === false) { reset(); return; }
     const oem = oemDialog();
     // A new interaction cancels any delayed confirmation from a previous scan.
@@ -119,19 +123,23 @@
     if (event.key === 'Enter' || event.key === 'Tab') {
       const rapid = buffer.length >= (isReceiving ? 4 : 5) && (now - started) / buffer.length <= MAX_AVERAGE;
       const nativeField = !isReceiving && portalOwnsTarget();
-      const href = !nativeField && !isReceiving && rapid && config.scannerOpenLinks !== false ? destination(buffer) : null;
+      const inSearch = !!target?.closest?.('#ubif-universal-search');
+      const href = !nativeField && !isReceiving && !(inSearch && !looksLikeUrl(buffer)) && rapid && config.scannerOpenLinks !== false ? destination(buffer) : null;
       const query = !nativeField && !isReceiving && rapid && !href && config.scannerSearch !== false ? searchTarget(buffer) : null;
       const searched = Boolean(query) && toSearch(query);
-      if (href || searched || (isReceiving && rapid)) {
+      if (href || searched || ((isReceiving || isCounting) && rapid)) {
         event.preventDefault();
         event.stopImmediatePropagation();
         const scan = buffer;
-        if (!oem) restore();
+        // run() has already replaced the universal-search value. Restoring it
+        // here would fire input and search the previous barcode again.
+        if (isCounting && inSearch && globalThis.UBIFPlusSearchUI?.cancelScan) globalThis.UBIFPlusSearchUI.cancelScan(original?.value || '');
+        else if (!oem && !(searched && inSearch)) restore();
         reset();
         // The portal's useListenScanDetected hook consumes this exact event.
         // Canceling the terminator also prevents its keypress detector from
         // delivering the same scan twice. Validation and Receive Parts stay native.
-        if (isReceiving) {
+        if (isReceiving || isCounting) {
           window.dispatchEvent(new CustomEvent('scanDetected', { detail: { scan } }));
           if (oem && config.scannerOEMConfirm !== false && /^[0-9A-Za-z]{14,22}$/.test(scan)) {
             const pending = { dialog: oem, scan, route: window.location.pathname };

@@ -346,3 +346,53 @@ test('scanning a SKU on the workorders list page still goes to universal search'
   b.scan('4902567890123');
   assert.deepEqual(queries, ['4902567890123'], 'SKU still goes to universal search from list page');
 });
+
+test('successive scans in universal search retain the newest query without restoring the old one', t => {
+  const b = boot(t), root = b.w.document.createElement('div');
+  root.id = 'ubif-universal-search';
+  const input = b.w.document.createElement('input'); root.append(input); b.w.document.body.append(root);
+  const searches = [];
+  b.context.UBIFPlusSearchUI = { run(query) { searches.push(query); input.value = query; input.focus(); input.select(); return true; } };
+  b.scan('SKU-FIRST');
+  let restorations = 0;
+  input.addEventListener('input', () => { if (input.value === 'SKU-FIRST') restorations++; });
+  b.scan('SKU-SECOND', { target: input });
+  assert.equal(input.value, 'SKU-SECOND');
+  assert.equal(restorations, 0);
+  b.scan('SKU-THIRD', { target: input, suffix: 'Tab' });
+  assert.equal(input.value, 'SKU-THIRD');
+  assert.deepEqual(searches, ['SKU-FIRST', 'SKU-SECOND', 'SKU-THIRD']);
+});
+
+test('inventory counts deliver each scan once to the native count listener, never universal search', t => {
+  const b = boot(t), received = [];
+  b.w.history.pushState({}, '', '/boh/inventory/counts/COUNT-1/edit');
+  b.w.addEventListener('scanDetected', event => received.push(event.detail.scan));
+  b.context.UBIFPlusSearchUI = { run() { assert.fail('inventory scan opened search'); } };
+  b.scan('I-1234567890');
+  b.scan('I-1234567891', { target: b.w.document.querySelector('button'), suffix: 'Tab' });
+  assert.deepEqual(received, ['I-1234567890', 'I-1234567891']);
+  assert.deepEqual(b.navigations, []);
+  b.w.history.pushState({}, '', '/boh/inventory/counts');
+  assert.equal(b.scan('30787644').defaultPrevented, false);
+  assert.deepEqual(b.navigations, []);
+});
+
+test('numeric item scans in the focused universal search search instead of opening a work order', t => {
+  const b = boot(t), root = b.w.document.createElement('div'); root.id = 'ubif-universal-search';
+  const input = b.w.document.createElement('input'); root.append(input); b.w.document.body.append(root);
+  const queries = [];
+  b.context.UBIFPlusSearchUI = { run(query) { queries.push(query); input.value = query; return true; } };
+  b.scan('12345678', { target: input });
+  assert.deepEqual(queries, ['12345678']); assert.deepEqual(b.navigations, []);
+});
+
+test('count scan cancels pending universal search if its input still had focus', t => {
+  const b = boot(t), root = b.w.document.createElement('div'); root.id = 'ubif-universal-search';
+  const input = b.w.document.createElement('input'); input.value = 'previous query'; root.append(input); b.w.document.body.append(root);
+  b.w.history.pushState({}, '', '/boh/inventory/counts/COUNT-1/edit');
+  let restored;
+  b.context.UBIFPlusSearchUI = { run() { assert.fail('count must own this scan'); }, cancelScan(value) { restored = value; } };
+  b.scan('I-1234567890', { target: input });
+  assert.equal(restored, 'previous query');
+});

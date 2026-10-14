@@ -119,7 +119,9 @@ async function boot(t, overrides = {}) {
   t.after(() => dom.window.close());
   const w = dom.window; const s = server(overrides); s.order = { ...s.order, nextUpdate: '2020-01-01T12:00:00Z' };
   w.fetch = s.fetch;
+  if (overrides.settings) w.UBIFPlusSettings = overrides.settings;
   w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  w.HTMLDialogElement.prototype.show = function () { this.open = true; };
   w.HTMLDialogElement.prototype.close = function () { this.open = false; };
   w.eval(model); w.eval(ui); await flush();
   return { w, s, root: w.document.querySelector('#ubif-update-today-board') };
@@ -235,4 +237,34 @@ test('quick-date selection clears on manual edit and refresh without losing note
   root.querySelector('[aria-label="Refresh order / notes"]').click(); await flush();
   assert.equal(chip.getAttribute('aria-pressed'), 'false');
   assert.equal(root.querySelector('[aria-label="New work order note"]').value, 'Keep this unsent note.');
+});
+
+test('messages keep Update Today drafts intact and return to the modal when native chat closes', async t => {
+  const { w } = await boot(t);
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  root.querySelector('.card button').click(); await flush();
+  const note = root.querySelector('[aria-label="New work order note"]'); note.value = 'Unsent board draft';
+  const dialog = root.querySelector('dialog');
+  root.querySelector('[aria-label="View and send customer messages"]').click();
+  const send = data => w.dispatchEvent(new w.MessageEvent('message', { source: w, data: { source: 'ubif-plus', ...data } }));
+  send({ type: 'board-chat-result', requestId: dialog.dataset.messageRequest, error: '' });
+  assert.equal(dialog.dataset.messaging, 'true');
+  assert.equal(note.value, 'Unsent board draft');
+  send({ type: 'message-context', open: false });
+  assert.equal(dialog.dataset.messaging, undefined);
+  assert.equal(dialog.open, true);
+  assert.equal(note.value, 'Unsent board draft');
+});
+
+test('Include tomorrow saves through shared settings and restores on load', async t => {
+  const writes = [];
+  const settings = { get: async () => ({ board: true, boardIncludeTomorrow: true }), subscribe() {}, set: async patch => writes.push(patch) };
+  const { w } = await boot(t, { settings });
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board');
+  const checkbox = root.shadowRoot.querySelector('.toolbar input[type=checkbox]');
+  assert.equal(checkbox.checked, true);
+  checkbox.click(); await flush();
+  assert.equal(writes[0].boardIncludeTomorrow, false);
 });

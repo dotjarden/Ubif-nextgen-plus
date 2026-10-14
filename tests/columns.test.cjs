@@ -34,7 +34,7 @@ test('the dialog lists the portal defaults once, grouped, and applies live', asy
   const ui = openColumns(s);
   assert.equal(button(ui, 'Apply'), undefined, 'live apply: there is no Apply button');
   assert.ok(button(ui, 'Done'));
-  assert.deepEqual([...ui.querySelectorAll('.group')].map(g => g.textContent), ['Workorder (10)', 'Program (3)', 'Customer (4)', 'Device (7)']);
+  assert.deepEqual([...ui.querySelectorAll('.group')].map(g => g.textContent), ['Workorder (11)', 'Program (3)', 'Customer (4)', 'Device (7)']);
   const labels = names(ui);
   assert.equal(labels.length, COLUMNS.length, 'every logical column is offered once');
   assert.equal(labels.filter(name => name === 'Status').length, 1, 'no duplicate Status');

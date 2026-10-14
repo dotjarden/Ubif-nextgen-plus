@@ -1,5 +1,5 @@
-/* Read-only adapter for the shared R92.4 ChatPanel. SystemJS exposes the
- * existing global store; no dispatch, messaging API call, or data persistence. */
+/* Adapter for the shared Portal ChatPanel. Board launches use the native
+ * store; message composition and sending remain entirely Portal-owned. */
 (() => {
   'use strict';
   if (globalThis.__ubifPlusMessagesPage) return;
@@ -95,6 +95,50 @@
       if (fingerprint !== previous) { previous = fingerprint; window.postMessage(payload, '*'); }
     } catch { /* Portal state not ready; do not affect its chat. */ }
   }
+  async function openBoardChat(request) {
+    const id = String(request.workorderId || '');
+    const token = request.requestId;
+    const editor = document.querySelector('#ubif-update-today-board')?.shadowRoot?.querySelector('dialog[open]');
+    const valid = () => /^\/repair\/workorders\/?$/.test(location.pathname) && editor?.isConnected && editor.open && editor.dataset.messageRequest === token && editor.dataset.workorderId === id;
+    if (!/^\d+$/.test(id) || typeof token !== 'string' || !valid()) return;
+    const reply = error => window.postMessage({ source: 'ubif-plus', type: 'board-chat-result', requestId: token, workorderId: id, error }, '*');
+    try {
+      const system = globalThis.System;
+      const module = system?.get(system.resolve('@ubif/util-store'));
+      if (!module?.store?.dispatch || !module.setChatPanelData || !module.setChatPanelOpen) throw new Error('Portal messaging is not ready. Please try again.');
+      const read = async path => {
+        const response = await fetch(path, { credentials: 'same-origin' });
+        if (!response.ok) throw new Error('Could not load customer messaging. Please try again.');
+        return response.json();
+      };
+      const detail = (await read(`/api/workorder/${id}`)).workorder;
+      const customerId = detail?.CustomerDevice?.customerId;
+      if (!customerId) throw new Error('This order has no customer available for messaging.');
+      const jobs = await read(`/api/customer/recent-jobs/${encodeURIComponent(customerId)}`);
+      const customer = jobs.customer;
+      if (!customer) throw new Error('Could not verify customer contact details. Open the order in Portal.');
+      if (!valid()) return;
+      const state = module.store.getState(), existing = module.selectChatPanelData(state);
+      if (module.selectChatPanelOpen(state)) {
+        if (String(existing?.customerId) !== String(customerId) || String(existing?.workorderId) !== id) throw new Error('Close the current message conversation before opening another order.');
+        reply(''); return;
+      }
+      const recentJobs = [
+        ...(jobs.workorders || []).map(job => ({ id: `workorder-${job.workorderId}`, jobType: 'workorder', title: job.deviceName, subtitle: `WO #${job.workorderId}`, tag: job.workorderStatus, workorderNumber: String(job.workorderId), deviceName: job.deviceName })),
+        ...(jobs.arrivals || []).map(job => ({ id: `arrival-${job.arrivalId}`, jobType: 'arrival', title: job.deviceName, subtitle: job.appointmentAt || job.createdAt, tag: job.arrivalStatus, appointmentAt: job.appointmentAt || job.createdAt, deviceName: job.deviceName, arrivalStatusId: job.arrivalStatusId }))
+      ];
+      module.store.dispatch(module.setChatPanelData({
+        customerId, workorderId: id,
+        customerName: customer.fullName || [customer.givenName, customer.familyName].filter(Boolean).join(' '),
+        primaryPhoneNumber: customer.primaryPhoneNumber, contactPhoneNumber: customer.contactPhoneNumber,
+        customerPhone: customer.contactPhoneNumber || customer.primaryPhoneNumber || '', canSms: customer.canSms,
+        preferredContactMethod: [customer.canCall && 'Call', customer.canEmail && 'Email'].filter(Boolean).join(', '),
+        recentJobs, hasActiveWorkorder: (jobs.workorders || []).length > 0, allowSMSForArrival: jobs.allowSMSForArrival
+      }));
+      module.store.dispatch(module.setChatPanelOpen(true));
+      reply('');
+    } catch (error) { if (valid()) reply(error.message || 'Could not open Portal messaging.'); }
+  }
   function connect() {
     try {
       const system = globalThis.System;
@@ -106,6 +150,7 @@
   }
   document.addEventListener('click', capture, true);
   addEventListener('message', event => {
+    if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'board-chat-open') openBoardChat(event.data);
     if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'message-context-request') { previous = ''; employeePrevious = null; connect(); }
   });
   setInterval(connect, 500);

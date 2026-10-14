@@ -87,6 +87,9 @@
       display: textColumn(r => r.serviceOutcome), read: r => r.serviceOutcome },
     { id: 'waitingSince', label: 'Waiting since', group: 'Workorder', portalIds: [], width: 150, date: true,
       display: dateColumn('rfpWorkorderStatusDate'), read: r => r.rfpWorkorderStatusDate },
+    { id: 'lineItems', label: 'Line items / SKUs', group: 'Workorder', portalIds: [], width: 300,
+      display: r => ({ a: r.lineItemsState || (Array.isArray(r.cartItems) ? r.cartItems.map(item => [item.sku, item.name].filter(Boolean).join(' — ')).join('; ') || 'No line items' : 'Loading…'), b: '' }),
+      read: r => (r.cartItems || []).map(item => item.sku).join(', ') },
     // Program
     { id: 'program', label: 'Program', group: 'Program', portalIds: ['woProgram', 'program'], width: 180,
       display: textColumn(r => r.programName), read: r => r.programName },

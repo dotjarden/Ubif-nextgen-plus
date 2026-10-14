@@ -174,3 +174,81 @@ test('search filters the column list and cannot hide the last visible column', a
   assert.equal(checkbox(ui, checked[0].dataset.focus.replace('-check', '')).disabled, true);
   assert.equal(s.writes.length > 0, true, 'live apply writes without an Apply button');
 });
+
+test('native Created and Next update sorts persist and restore without changing the table identity', async t => {
+  const s = await setup(); t.after(() => { s.w.dispatchEvent(new s.w.Event('pagehide')); s.dom.window.close(); });
+  const a = record(301), b = record(302);
+  a.createdAt = '2026-10-01'; b.createdAt = '2026-10-03';
+  a.nextUpdate = '2026-10-05'; b.nextUpdate = '2026-10-02';
+  await s.post([a, b]);
+  const tableNode = s.w.document.querySelector('table');
+  for (const [header, id, first] of [['createdDate', 'created', '1'], ['nextUpdate', 'nextUpdate', '2']]) {
+    const th = tableNode.querySelector(`th[data-column-id="${header}"]`);
+    const button = th.querySelector('[data-ubif-handle="sort"]');
+    button.click(); await s.tick();
+    assert.equal(tableNode.tBodies[0].rows[0].style.order, first);
+    assert.equal(th.getAttribute('aria-sort'), 'ascending');
+    button.click(); await s.tick();
+    assert.equal(th.getAttribute('aria-sort'), 'descending');
+    assert.equal(s.data['ubif-plus.columns.v1.All'].sort.id, id);
+    assert.equal(s.data['ubif-plus.columns.v1.All'].sort.dir, 'desc');
+    assert.equal(s.w.document.querySelector('table'), tableNode);
+  }
+  const restored = await setup(s.data); t.after(() => { restored.w.dispatchEvent(new restored.w.Event('pagehide')); restored.dom.window.close(); });
+  await restored.post([a, b]);
+  assert.equal(restored.w.document.querySelector('th[data-column-id="nextUpdate"]').getAttribute('aria-sort'), 'descending');
+});
+
+test('line item column loads the order cart only when visible and escapes SKU text', async t => {
+  const s = await setup(); t.after(() => { s.w.dispatchEvent(new s.w.Event('pagehide')); s.dom.window.close(); });
+  const calls = [];
+  s.w.fetch = async path => {
+    calls.push(path);
+    return { ok: true, json: async () => path.startsWith('/api/workorder/')
+      ? { workorder: { csuCartId: 'cart-' + path.split('/').pop() } }
+      : { cartItems: [{ sku: 'SKU-123', name: '<script>Screen</script>' }, { sku: 'SKU-456', name: 'Battery' }] } };
+  };
+  await s.post([record(301), record(302)]);
+  assert.equal(calls.length, 0);
+  checkbox(s.open(), 'lineItems').click(); await s.tick(); await s.tick();
+  const row = s.w.document.querySelector('tbody tr');
+  assert.match(cellText(row, 'lineItems'), /SKU-123.*Screen.*SKU-456/);
+  assert.equal(row.querySelector('[data-ubif-extra="lineItems"] script'), null);
+  assert.equal(calls.length, 4);
+  assert.ok(!s.data['ubif-plus.columns.v1.All'].hidden.includes('lineItems'));
+});
+
+test('Portal sort controls replace the extension sort button without duplicate actions', async t => {
+  const s = await setup(); t.after(() => { s.w.dispatchEvent(new s.w.Event('pagehide')); s.dom.window.close(); });
+  const header = s.w.document.querySelector('th[data-column-id="createdDate"]');
+  assert.equal(header.querySelectorAll('[data-ubif-handle="sort"]').length, 1);
+  const native = s.w.document.createElement('button');
+  native.dataset.testid = 'sort-icon-asc';
+  let nativeClicks = 0; native.onclick = () => nativeClicks++;
+  header.append(native); await s.tick();
+  assert.equal(header.querySelectorAll('[data-ubif-handle="sort"]').length, 0);
+  native.click(); assert.equal(nativeClicks, 1);
+  assert.equal(header.querySelector('[data-testid="sort-icon-asc"]'), native);
+});
+
+test('native hover tooltip is promoted in place and its styles are restored on cleanup', async t => {
+  const s = await setup(); t.after(() => { s.w.dispatchEvent(new s.w.Event('pagehide')); s.dom.window.close(); });
+  const tooltip = s.w.document.createElement('span');
+  tooltip.dataset.aui = 'tooltip'; tooltip.textContent = 'The complete customer or device name';
+  tooltip.style.color = 'red';
+  let open = false;
+  tooltip.showPopover = () => { open = true; };
+  tooltip.hidePopover = () => { open = false; };
+  const matches = tooltip.matches.bind(tooltip);
+  tooltip.matches = selector => selector === ':popover-open' ? open : matches(selector);
+  const cell = s.w.document.querySelector('tbody td'); cell.append(tooltip);
+  await s.tick();
+  assert.equal(open, true);
+  assert.equal(tooltip.parentElement, cell, 'React keeps ownership of the original tooltip');
+  assert.equal(tooltip.style.position, 'fixed');
+  assert.equal(tooltip.style.color, 'red');
+  s.w.history.pushState({}, '', '/other'); s.w.dispatchEvent(new s.w.Event('popstate')); await s.tick();
+  assert.equal(open, false);
+  assert.equal(tooltip.hasAttribute('popover'), false);
+  assert.equal(tooltip.getAttribute('style'), 'color: red;');
+});

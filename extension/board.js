@@ -56,6 +56,12 @@
     .notes{max-height:260px;overflow:auto;overscroll-behavior:contain;padding-right:4px}.note{position:relative;margin-left:3px;padding:16px 0 2px 16px;border-left:1px solid var(--line);font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}.note::before{content:'';position:absolute;left:-3px;top:23px;width:5px;height:5px;border-radius:50%;background:var(--aui-outline,#bcbac3)}.note small{display:block;margin-bottom:6px;color:var(--muted);font-size:12px}.note:last-child{padding-bottom:12px}
     .notes-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:22px}.notes-heading h3{margin:0}.notes-heading .reload{min-height:0;padding:0;border:0;border-radius:2px;background:transparent;font-size:12px;font-weight:500;color:var(--muted);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}.notes-heading .reload:hover:not(:disabled){background:transparent;text-decoration-color:currentColor}.hidden{display:none!important}
     @media(max-width:700px){dialog{width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}.dialog-head{padding:20px;gap:12px}.dialog-head h2{font-size:22px}.head-actions{gap:10px}.head-actions a{font-size:12px}.order-meta{padding:12px 20px;gap:20px;flex-wrap:wrap}.workspace{grid-template-columns:minmax(0,1fr)}.update-column,.notes-column{padding:20px}.notes-column{border-left:0;border-top:1px solid var(--line)}.feedback{padding:10px 20px}.notes{max-height:none}}
+    :host:has(dialog[data-messaging][open])::before{content:"";position:fixed;inset:0 32rem 0 0;background:#17151d80;z-index:1800}
+    dialog[data-messaging]{position:fixed;inset:80px auto 24px 16px;margin:0;width:calc(100vw - 32rem - 32px);max-height:calc(100dvh - 104px);z-index:1900}
+    dialog[data-messaging] .workspace{grid-template-columns:minmax(0,1fr)}
+    dialog[data-messaging] .notes-column{border-left:0;border-top:1px solid var(--line)}
+    dialog[data-messaging] .dialog-head{flex-wrap:wrap;padding:20px}
+    @media(max-width:850px){dialog[data-messaging]{visibility:hidden}}
     @media(prefers-reduced-motion:reduce){dialog button{transition:none}}
 
   `;
@@ -128,6 +134,24 @@
     } catch (error) { if (active && token === generation) say(`${error.message}${lastSync ? ` Showing last sync from ${lastSync}.` : ''}`, true); }
     finally { if (token === generation) { loading = false; refresh.disabled = false; } }
   }
+  addEventListener('message', event => {
+    const data = event.data;
+    if (event.source !== window || data?.source !== 'ubif-plus') return;
+    if (data.type === 'board-chat-result' && dialog.open && data.requestId === dialog.dataset.messageRequest) {
+      delete dialog.dataset.messageRequest;
+      dialog.querySelector('[aria-label="View and send customer messages"]').disabled = false;
+      const info = dialog.querySelector('.feedback');
+      info.textContent = data.error || ''; info.dataset.error = String(!!data.error);
+      if (!data.error) {
+        // A modal makes the rest of the document inert, including Portal chat.
+        // Keep the editor and its drafts mounted while allowing native chat use.
+        dialog.close(); dialog.dataset.messaging = 'true'; dialog.show();
+      }
+    }
+    if (data.type === 'message-context' && !data.open && dialog.open && dialog.dataset.messaging) {
+      dialog.close(); delete dialog.dataset.messaging; dialog.showModal();
+    }
+  });
   function field(label, control) { const node = el('label', label, { class: 'field' }); node.append(control); return node; }
   function panel(title, lead) {
     const node = el('section', '', { class: 'panel' });
@@ -135,11 +159,13 @@
     if (lead) node.append(el('p', lead, { class: 'hint' }));
     return node;
   }
-  function closeDialog() { if (saving) return; detailController?.abort(); selected = null; snapshot = null; refreshOpenNotes = null; dialog.close(); }
+  function closeDialog() { if (saving) return; delete dialog.dataset.messageRequest; delete dialog.dataset.messaging; detailController?.abort(); selected = null; snapshot = null; refreshOpenNotes = null; dialog.close(); }
   async function openOrder(id, target) {
     if (saving) return;
     detailController?.abort(); detailController = new AbortController(); const controller = detailController;
     selected = Number(id); snapshot = null; refreshOpenNotes = null;
+    delete dialog.dataset.messageRequest; delete dialog.dataset.messaging;
+    dialog.dataset.workorderId = String(id);
     dialog.replaceChildren();
     const info = el('p', 'Loading current order…', { class: 'status', role: 'status', 'aria-live': 'polite' });
     const headText = el('div', '', { class: 'head-text' });
@@ -147,7 +173,21 @@
     info.className = 'feedback';
     const link = el('a', 'Open in Portal ↗', { href: `/repair/workorder/${id}`, 'aria-label': `Open full work order ${id} in Portal` });
     const close = el('button', '×', { type: 'button', class: 'close', 'aria-label': 'Close', autofocus: '' }); close.onclick = closeDialog;
-    const headActions = el('div', '', { class: 'head-actions' }); headActions.append(link, close);
+    const messages = el('button', 'Messages', { type: 'button', 'aria-label': 'View and send customer messages' });
+    messages.onclick = () => {
+      const requestId = `${id}-${Date.now()}-${Math.random()}`;
+      dialog.dataset.messageRequest = requestId;
+      messages.disabled = true; info.textContent = 'Opening customer messages…';
+      window.postMessage({ source: 'ubif-plus', type: 'board-chat-open', workorderId: String(id), requestId }, '*');
+      setTimeout(() => {
+        if (dialog.dataset.messageRequest === requestId && messages.disabled) {
+          delete dialog.dataset.messageRequest; messages.disabled = false;
+          info.textContent = 'Portal messaging did not respond. Please try again or open the order in Portal.';
+          info.dataset.error = 'true';
+        }
+      }, 15000);
+    };
+    const headActions = el('div', '', { class: 'head-actions' }); headActions.append(messages, link, close);
     const header = el('div', '', { class: 'dialog-head' }); header.append(headText, headActions);
     const body = el('div', '', { class: 'dialog-body' });
     dialog.append(header, info, body);
@@ -310,7 +350,7 @@
   dialog.addEventListener('cancel', event => { event.preventDefault(); closeDialog(); });
   refresh.onclick = load;
   search.oninput = () => { render(); say(`${visible().length} matching orders · Synced ${lastSync || 'never'} · Times in ${zone}`); };
-  tomorrow.onchange = () => { render(); say(`${visible().length} matching orders · Synced ${lastSync || 'never'} · Times in ${zone}`); };
+  tomorrow.onchange = () => { S?.set({ boardIncludeTomorrow: tomorrow.checked }).catch(() => say('Could not remember Include tomorrow. Please try again.', true)); render(); say(`${visible().length} matching orders · Synced ${lastSync || 'never'} · Times in ${zone}`); };
   function restore() {
     document.querySelectorAll('[data-ubif-board-hidden]').forEach(n => n.removeAttribute('data-ubif-board-hidden'));
     if (selectedTab?.isConnected) selectedTab.setAttribute('aria-selected', 'true');

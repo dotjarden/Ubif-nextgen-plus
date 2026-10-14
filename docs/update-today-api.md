@@ -45,3 +45,15 @@ Automated tests and a fictional local preview exercise pagination, local day bou
 Browser preview checked: tab placement, order grouping, card editor, a manual move with a date ten days ahead and its note, and removal of the rescheduled card from the queue. Preview responses are fictional and do not prove production backend acceptance.
 
 Before treating this as production-validated, reload extension 0.5.0 in a signed-in Portal browser and verify current response shapes/permissions, a designated order's date-only update beyond three days, an allowed manual move (including partner-side behavior), note round-trip, and native Portal refresh in another tab. No live work order was changed during implementation. Production writes and Portal's current markup still need that check.
+
+## Messaging from the editor (October 14, 2026)
+
+The Messages action reads the current order (`GET /api/workorder/:id`) and its customer's contact preferences/recent jobs (`GET /api/customer/recent-jobs/:customerId`), then uses `@ubif/util-store`'s `setChatPanelData` and `setChatPanelOpen` actions. These contracts were checked against Portal's frontend assets and import map (current import-map build `bfa9e2e39463195c54af`). It performs no message send request itself. The normal Portal ChatPanel owns conversation history, message submission, templates, and SMS eligibility.
+
+While chat is open the editor becomes nonmodal beside it, preserving its fields; closing chat restores the editor's modal behavior. Narrow windows temporarily hide the editor until chat closes. A different open conversation must be closed first, preventing its draft from being silently reassigned. Stale/closed editor requests are ignored and launch failures stay visible in the editor.
+
+Tests use fictional customer/order data and a mocked native store. The desktop layout was checked in the browser with a fictional chat panel. A signed-in Portal session was not available; live history/send behavior and hardware scans still need verification after reloading the extension. No live messages or inventory writes were performed.
+
+## Work-order line-item column
+
+When selected in Columns, Line items / SKUs reads `workorder.csuCartId` from `GET /api/workorder/:id`, then `cartItems` from `GET /api/get-cart/:cartId?includePartStatus=true`, as the native repair frontend does. It displays each item's `sku` and `name`, with full contents on hover. Only visible table rows load details, at most three concurrently; the data is memory-only and requests are canceled when the table is removed. Loading/error states are explicit. Layout and date-sort choices persist per tab; extension sorts cover loaded rows, while Portal's original header sort remains available.

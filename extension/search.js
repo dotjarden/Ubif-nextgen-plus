@@ -271,6 +271,10 @@
      searched straight away, with no typing delay. Returns false when the
      feature is off or not mounted so the caller can leave the portal alone. */
   globalThis.UBIFPlusSearchUI = Object.freeze({
+    cancelScan(value) {
+      stop(); groups = []; input.value = String(value || ''); syncClear(); open(false);
+      input.blur();
+    },
     run(value) {
       const query = String(value == null ? '' : value).trim();
       if (!config.search || !mounted || query.length < config.searchMinChars) return false;
@@ -282,6 +286,7 @@
       render();
       status.textContent = 'Searching…';
       input.focus();
+      input.select();
       search();
       return true;
     }
