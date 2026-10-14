@@ -28,6 +28,7 @@
       ],
       "js": [
         "settings.js",
+        "employee.js",
         "home.js",
         "arrivals.js",
         "scanner.js",

@@ -228,3 +228,24 @@ test('remaining category responses preserve the inline serial chooser and newer 
   assert.equal(chooser.closest('.ubif-result-row').querySelector('a').textContent.includes('Screen'), true);
   enter(w, 'battery'); await wait(20); assert.equal(w.document.querySelector('#ubif-buyback'), null);
 });
+
+test('native inline tags show status, source, program and claim within the result and turn off live', async t => {
+  let apply;
+  const dom = new JSDOM('<header><div class="components-header-searchbox"></div></header>', { url: 'https://portal.ubreakifix.net', runScripts: 'outside-only', pretendToBeVisual: true });
+  t.after(() => dom.window.close());
+  const w = dom.window;
+  w.UBIFPlusSettings = { get: async () => ({ search: true, searchInlineTags: true }), subscribe: fn => { apply = fn; } };
+  w.fetch = async path => path === '/api/workorders' ? ok({ workOrders: [{ workorderId: 123456, customer: { fullName: 'Alex Smith' }, clientId: 3, deviceCatalog: {name: 'iPhone 16'}, workorderStatusName: 'Ready for pickup', programName: 'Asurion Mobility', source: 'Remote Tech', claimNumber: 'CL123' }] }) : empty(path);
+  w.eval(model); w.eval(script);
+  enter(w, '123456'); await wait(25);
+  const panel = w.document.querySelector('#ubif-search-results');
+  assert.equal(panel.querySelectorAll('.ubif-search-filter').length, 0);
+  const row = panel.querySelector('a[href="/repair/workorder/123456"]');
+  assert.deepEqual([...row.querySelectorAll('.ubif-result-tag')].map(n => n.textContent), ['AT&T', 'Asurion Mobility', 'Remote Tech', 'Ready for pickup', 'Claim CL123']);
+  assert.equal(row.querySelector('[data-tone=green]').textContent, 'Ready for pickup');
+  assert.equal(row.querySelector('[data-tone=purple]').textContent, 'Asurion Mobility');
+  assert.equal(row.querySelector('small').textContent, 'iPhone 16');
+  apply({ search: true, searchInlineTags: false }); await wait(25);
+  assert.equal(panel.querySelectorAll('.ubif-result-tag').length, 0);
+  assert.ok(panel.querySelector('a[href="/repair/workorder/123456"]'));
+});

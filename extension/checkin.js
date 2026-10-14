@@ -13,7 +13,7 @@
     ['services', 'Services Offered', ['yes', 'no']], ['eta', 'ETA', 100], ['price', 'Price Est', 100]
   ];
   const selector = '[data-testid="additional-details-note"], [data-testid="DeviceDiagSubIssues_Notes"]';
-  let active = null;
+  let active = null, config = { checkin: true, checkinBattery: true };
   function split(value) {
     const legacyStart = value.indexOf(LEGACY_START), legacyEnd = value.indexOf(LEGACY_END, legacyStart);
     let start, end, lines;
@@ -96,6 +96,7 @@
     return best;
   }
   function mountShortcut(textarea) {
+    if (!config.checkinBattery) return null;
     const groups = diagnosisGroups(textarea);
     const first = [...groups.keys()].map(id => [...document.querySelectorAll('[data-testid]')].find(node => node.dataset.testid === id)).find(Boolean);
     if (!first) return null;
@@ -272,6 +273,7 @@
         for (const [key] of fields) controls[key].value = values[key] || '';
         if (textarea.value.includes(LEGACY_START) && textarea.value.includes(LEGACY_END)) sync();
       }
+      if (!config.checkinBattery) { shortcut?.dispose(); shortcut = null; }
       if (!shortcut) shortcut = mountShortcut(textarea);
       shortcut?.update();
       const enabled = typeof handlerFor(textarea) === 'function' && !textarea.disabled && !textarea.readOnly;
@@ -301,7 +303,7 @@
     return { textarea, host, update, validate, dispose() { textarea.removeEventListener('input', onNativeInput); shortcut?.dispose(); host.remove(); } };
   }
   function refresh() {
-    const inCheckin = /^\/check-in\/?$/.test(location.pathname);
+    const inCheckin = config.checkin && /^\/check-in\/?$/.test(location.pathname);
     const candidates = inCheckin ? [...document.querySelectorAll(selector)].flatMap(node => node.matches('textarea') ? [node] : [...node.querySelectorAll('textarea')]) : [];
     const textarea = candidates.length === 1 ? candidates[0] : null;
     if (active && (active.textarea !== textarea || !active.host.isConnected)) { active.dispose(); active = null; }
@@ -310,6 +312,12 @@
     const anchor = textarea.closest('.note') || textarea.closest(selector) || textarea.parentElement;
     active = mount(textarea, anchor);
   }
+  addEventListener('message', event => {
+    if (event.source !== window || event.data?.source !== 'ubif-plus' || event.data.type !== 'feature-settings') return;
+    config = { checkin: event.data.checkin !== false, checkinBattery: event.data.checkinBattery !== false };
+    refresh();
+  });
+  window.postMessage({ source: 'ubif-plus', type: 'feature-settings-request' }, '*');
   const observer = new MutationObserver(refresh);
   function start() { observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'readonly'] }); refresh(); }
   if (document.documentElement) start(); else addEventListener('DOMContentLoaded', start, { once: true });

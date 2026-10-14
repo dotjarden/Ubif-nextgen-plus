@@ -6,6 +6,9 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Added
 
+- Employee first-name template detail, RT iPhone and RT Android appointment confirmations, and a name button replacing the header profile icon while retaining its account menu. Settings include a first-name override.
+- Settings for message templates, quick template shortcuts, the employee label, check-in Extra Details, the battery diagnosis shortcut, and inline search result tags.
+
 - Extra Details above the native Additional Details section on standard and Samsung diagnosis forms: Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est. Entries join existing Notes / Additional Details and save through the normal check-in workflow. ETA accepts a time, date or “unsure.” A “Battery not working” shortcut below the diagnosis heading selects “Can’t test” for every native category and fills required test-reason notes, opening collapsed categories when needed. The button leaves Extra Details untouched and no longer shows the Quick diagnosis label or explanatory paragraph. Autofilled notes use plain “Extra Details:” text without extension branding. All eight Extra Details fields are required before continuing diagnosis; the battery shortcut discovers all sibling categories even when an inner render exposes only Hardware. Selection confirmation resolves React’s current committed tree to avoid stopping after Hardware on a stale render.
 
 - Add inline Print buyback buttons beside item and sold serial search results, a sold-serial chooser, and a Universal search setting to show or hide the buttons. Printing uses the linked work order’s native action.
@@ -14,6 +17,8 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Improved
 
+- Universal search shows native-style program, source, status, and claim tags inline within each result. Update Today matches the native tab label typography and 4px on-surface selection indicator.
+
 - Message templates now use compact shortcuts and a searchable library. A visual editor inserts readable detail chips at the typing cursor, provides customer previews and simple alternate-text settings, and supports copying templates and undoing deletion. Missing required details prompt for one-time values, and existing drafts offer explicit Add or Replace actions.
 
 - Arrivals now offers the same 10/25/50/100 rows-per-page choices as Workorders, with native table pagination, a saved preference, and a toggle and page-size dropdown in addon settings → Tables.
@@ -21,6 +26,9 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 - New icon artwork: a dark rounded tile with a white **U** and a sky-blue plus, sourced from `icon.svg` and rendered into every toolbar, notification, and store-facing asset. The previous raster art is kept as `old-icon.jpeg`.
 
 ### Fixed
+
+- Employee names attach to the Portal’s actual `.components-header-opts-avatar` control, use native header typography and vertical alignment, and follow signed-in user changes.
+- Keep message templates anchored directly above the composer after messages and conversation rerenders. Reordered table cells now apply side borders and rounded corners at the visible table edges.
 
 - Message templates recover appointment/device details from the matching mounted arrival when chat is already open or its launch click was missed. Late arrival data completes the original template selection and removes the unnecessary missing-appointment prompt.
 

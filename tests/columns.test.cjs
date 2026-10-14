@@ -181,6 +181,11 @@ test('header drag reorders without firing sort and stays attached after refresh'
   target.dispatchEvent(drag('dragover')); assert.equal(target.hasAttribute('data-ubif-drop'),true);
   target.dispatchEvent(drag('drop')); await s.tick();
   assert.equal(s.data['ubif-plus.columns.v1.All'].order[0],'woId');
+  const css = s.w.document.querySelector('#ubif-plus-table-style').textContent;
+  assert.match(css, /border-radius:0!important;border-left:0!important;border-right:0!important/);
+  assert.ok(css.includes(`>td:nth-child(${columns.findIndex(c => (c.id || c[0]) === 'woId') + 1}):not([colspan]){border-left:1px solid`), 'left border follows the displayed first column');
+  assert.ok(css.includes(`>td:nth-child(${columns.findIndex(c => (c.id || c[0]) === 'location') + 1}):not([colspan]){border-right:1px solid`), 'right border follows the displayed last column');
+  assert.ok(css.includes(`>th:nth-child(${columns.findIndex(c => (c.id || c[0]) === 'woId') + 1}){border-top-left-radius:`), 'rounded edge follows the column moved to the first position');
   assert.equal(target.hasAttribute('data-ubif-drop'),false);
   s.w.document.querySelector('tbody').innerHTML = '<tr><td colspan="8">No workorders</td></tr>'; await s.tick();
   assert.equal(s.w.document.querySelectorAll('[data-ubif-handle="move"]').length,columns.length);

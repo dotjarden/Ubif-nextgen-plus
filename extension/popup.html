@@ -33,7 +33,9 @@ section>p { font-size:13px; color:var(--soft); }
 .row>span { flex:1; min-width:0; font-weight:500; }
 .row small { display:block; margin-top:4px; color:var(--soft); font-size:12px; line-height:1.5; font-weight:400; }
 .row input[type=checkbox] { width:17px; height:17px; margin:0; flex:none; accent-color:var(--accent); cursor:pointer; }
+.row input[type=text] { width:160px; padding:6px 8px; border:1px solid var(--line); border-radius:4px; background:var(--paper); color:var(--text); }
 .row input[type=number] { width:76px; padding:5px 7px; border:1px solid var(--line); border-radius:4px; background:var(--paper); font-variant-numeric:tabular-nums; }
+.row input[type=text] { width:160px; padding:6px 8px; border:1px solid var(--line); border-radius:4px; background:var(--paper); color:var(--text); }
 .row select { width:76px; padding:5px 7px; border:1px solid var(--line); border-radius:4px; background:var(--paper); color:var(--text); font:inherit; }
 .row:has(input:disabled), .row:has(select:disabled) { color:var(--soft); cursor:default; }
 .row input:disabled, .row select:disabled { opacity:.45; cursor:default; }
@@ -73,6 +75,8 @@ html.full-page { width:auto; min-width:0; }
 <header><div class="heading"><strong>Settings</strong><span class="product-name">UBIF NextGen Plus</span><span id="ubif-version"></span><button id="open-settings" type="button">Open in tab</button></div><input id="settings-search" type="search" placeholder="Search settings" aria-label="Find a setting"></header>
 <div class="workspace"><nav aria-label="Settings categories">
   <a href="#home" data-section="home">Home</a>
+  <a href="#messages" data-section="messages">Messages &amp; employee</a>
+  <a href="#checkin" data-section="checkin">Check-in</a>
   <a href="#search" data-section="search">Universal search</a>
   <a href="#board" data-section="board">Update Today</a>
   <a href="#scanner" data-section="scanner">Barcode scanning</a>
@@ -83,8 +87,21 @@ html.full-page { width:auto; min-width:0; }
   <label class="row"><span>Hide Home calendar<small>Hide the Arrivals calendar on Home to give the main content more room.</small></span><input type="checkbox" data-key="hideHomeCalendar" data-depends="" disabled></label>
   <button class="reset" type="button" data-reset="home" disabled>Restore defaults</button>
 </section>
+<section id="messages" aria-labelledby="messages-title"><h2 id="messages-title" tabindex="-1">Messages &amp; employee</h2>
+  <label class="row"><span>Message templates<small>Show the template library in the customer message sidebar. Edit, copy, or delete templates there.</small></span><input type="checkbox" data-key="messages" data-depends="" disabled></label>
+  <label class="row"><span>Quick template shortcuts<small>Show the first two templates beside the library button.</small></span><input type="checkbox" data-key="messageShortcuts" data-depends="messages" disabled></label>
+  <label class="row"><span>Employee name in header<small>Replace the profile icon with your first name. Opens the same account menu.</small></span><input type="checkbox" data-key="employeeName" data-depends="" disabled></label>
+  <label class="row"><span>Employee first name<small>Override the Portal profile name for the header and templates. Leave blank to use the signed-in profile.</small></span><input type="text" data-key="employeeFirstName" data-depends="" disabled></label>
+  <button class="reset" type="button" data-reset="messages" disabled>Restore defaults</button>
+</section>
+<section id="checkin" aria-labelledby="checkin-title"><h2 id="checkin-title" tabindex="-1">Check-in</h2>
+  <label class="row"><span>Extra Details fields<small>Add and require the extra diagnosis fields before continuing. Turning this off keeps saved notes.</small></span><input type="checkbox" data-key="checkin" data-depends="" disabled></label>
+  <label class="row"><span>Battery not working shortcut<small>Show the shortcut for the Portal battery diagnosis options.</small></span><input type="checkbox" data-key="checkinBattery" data-depends="checkin" disabled></label>
+  <button class="reset" type="button" data-reset="checkin" disabled>Restore defaults</button>
+</section>
 <section id="search" aria-labelledby="search-title"><h2 id="search-title" tabindex="-1">Universal search</h2>
   <label class="row"><span>Enable universal search<small>Replace the portal search box with universal search.</small></span><input type="checkbox" data-key="search" data-depends="" disabled></label>
+  <label class="row"><span>Inline result tags<small>Show status, program, source, and claim tags within each search result.</small></span><input type="checkbox" data-key="searchInlineTags" data-depends="search" disabled></label>
   <label class="row"><span>Cmd/Ctrl + K shortcut<small>Focus search from anywhere in the portal.</small></span><input type="checkbox" data-key="searchHotkey" data-depends="search" disabled></label>
   <label class="row"><span>Open results in a new tab<small>Keep the current portal page open when selecting a result.</small></span><input type="checkbox" data-key="searchNewTab" data-depends="search" disabled></label>
   <label class="row"><span>Search delay (ms)<small>How long to wait after you stop typing. Range: 100–2,000 ms.</small></span><input type="number" min="100" max="2000" step="50" data-key="searchDebounceMs" data-depends="search" disabled></label>

@@ -153,7 +153,7 @@
     function paint() {
       editor = null; editorRange = null;
       shortcuts.replaceChildren();
-      for (const row of api.getTemplates().slice(0, 2)) shortcuts.append(btn(row.name, () => apply(row), 'shortcut', `Use ${row.name}`));
+      for (const row of api.getTemplates().slice(0, api.getShortcuts?.() === false ? 0 : 2)) shortcuts.append(btn(row.name, () => apply(row), 'shortcut', `Use ${row.name}`));
       toggle.setAttribute('aria-expanded', String(view !== 'closed'));
       notice.replaceChildren(); if (feedback) notice.append(document.createTextNode(feedback));
       if (undo) notice.append(btn('Undo', () => saveList(undo, () => { undo = null; feedback = 'Template restored.'; paint(); }), 'link'));
@@ -204,7 +204,7 @@
           }
           return group;
         };
-        const common = ['customer.firstName', 'device.name', 'appointment.date', 'workorder.number'];
+        const common = ['employee.firstName', 'customer.firstName', 'device.name', 'appointment.date', 'workorder.number'];
         content.append(tools(M.fields.filter(f => common.includes(f[0]))));
         const more = el('details', '', { class: 'more-fields' }); more.append(el('summary', 'More details'), tools(M.fields.filter(f => !common.includes(f[0])))); content.append(more);
         fillPanel = el('div'); content.append(fillPanel);
@@ -248,7 +248,7 @@
       }
     }
     paint();
-    return { update(reset = false) {
+    return { updateSettings() { captureEditor(); paint(); }, update(reset = false) {
       if (reset) pendingApply = null;
       if (pendingApply && !api.getContext().loading) {
         const pending = pendingApply; pendingApply = null;

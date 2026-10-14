@@ -22,9 +22,21 @@
   const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('workOrderUpdate') : null;
   const api = M.createAPI(globalThis.fetch.bind(globalThis), id => channel?.postMessage({ windowId: 'ubif-plus-board', workOrderId: id }));
   const style = el('style');
-  style.textContent = `[data-ubif-board-tabs]{max-width:100%;overflow-x:auto} [data-ubif-board-hidden]{display:none!important}#ubif-update-today-tab{font:inherit;white-space:nowrap;cursor:pointer;padding:12px 16px;border:0;background:transparent;color:inherit}#ubif-update-today-tab[aria-selected=true]{color:var(--aui-primary,#8224ce);box-shadow:inset 0 -3px var(--aui-primary,#8224ce)}#ubif-update-today-board{display:block;width:100%;min-width:0}#ubif-update-today-board[hidden]{display:none}`;
+  style.textContent = `
+    [data-ubif-board-tabs]{max-width:100%;overflow-x:auto}
+    [data-ubif-board-hidden]{display:none!important}
+    #ubif-update-today-tab{position:relative;display:flex;align-items:center;justify-content:center;gap:var(--aui-spacing-050,4px);font:inherit;white-space:nowrap;flex-shrink:0;cursor:pointer;padding:var(--aui-spacing-150,12px);margin:0;border:0;background:none;color:var(--aui-on-surface-soft,#5d5e61);appearance:none}
+    #ubif-update-today-tab>span{display:inline-block;font-size:var(--ubif-tab-font-size,1rem);line-height:var(--ubif-tab-line-height,1.3)}
+    #ubif-update-today-tab:hover{background:var(--aui-fills-surface-contrast,#0c0e110a)}
+    #ubif-update-today-tab:focus-visible{outline:2px solid var(--aui-on-surface,#242128);outline-offset:-2px}
+    #ubif-update-today-tab[aria-selected=true]{color:var(--aui-on-surface,#242128);box-shadow:inset 0 -4px 0 var(--aui-on-surface,#242128)}
+    html[data-ubif-board-active] [data-ubif-board-tabs]>[role=tab]:not([data-ubif-board-tab]){color:var(--aui-on-surface-soft,#5d5e61)!important;box-shadow:none!important}
+    #ubif-update-today-board{display:block;width:100%;min-width:0}
+    #ubif-update-today-board[hidden]{display:none}
+  `;
   document.head.append(style);
   const tab = el('button', 'Update Today', { id: 'ubif-update-today-tab', type: 'button', role: 'tab', 'aria-selected': 'false', 'aria-controls': 'ubif-update-today-board', 'data-ubif-board-tab': '' });
+  tab.replaceChildren(el('span', 'Update Today'));
   const host = el('section', '', { id: 'ubif-update-today-board', role: 'tabpanel', 'aria-labelledby': tab.id, hidden: '' });
   const shadow = host.attachShadow({ mode: 'open' });
   const css = el('style');
@@ -329,6 +341,14 @@
     const list = ready.closest('[role=tablist]') || ready.parentElement;
     list.setAttribute('data-ubif-board-tabs', '');
     if (!list.contains(tab)) list.append(tab);
+    const nativeStyle = getComputedStyle(ready);
+    const label = ready.querySelector('span:last-child');
+    const labelStyle = getComputedStyle(label || ready);
+    tab.style.setProperty('--ubif-tab-font-size', labelStyle.fontSize);
+    tab.style.setProperty('--ubif-tab-line-height', labelStyle.lineHeight);
+    for (const key of ['font', 'padding', 'minHeight', 'borderRadius', 'letterSpacing']) {
+      if (tab.style[key] !== nativeStyle[key]) tab.style[key] = nativeStyle[key];
+    }
     if (!active) return;
     for (const native of list.querySelectorAll('[role=tab][aria-selected=true]:not([data-ubif-board-tab])')) {
       if (!selectedTab?.isConnected) selectedTab = native;
@@ -356,9 +376,15 @@
     mount(); render(); load();
   };
   tab.addEventListener('keydown', event => {
+    if (event.key === 'Home' || event.key === 'ArrowRight') { event.preventDefault(); tab.parentElement?.querySelector('[role=tab]:not([data-ubif-board-tab])')?.focus(); }
     if (event.key === 'ArrowLeft') { event.preventDefault(); tab.previousElementSibling?.focus(); }
     if (event.key === 'Escape' && active) { const previous = selectedTab; deactivate(); previous?.focus(); }
   });
+  document.addEventListener('keydown', event => {
+    const native = event.target.closest?.('[role=tab]:not([data-ubif-board-tab])');
+    if (native?.parentElement !== tab.parentElement || !tab.isConnected) return;
+    if (event.key === 'End' || event.key === 'ArrowRight' && native.nextElementSibling === tab) { event.preventDefault(); event.stopPropagation(); tab.focus(); }
+  }, true);
   document.addEventListener('click', event => {
     const native = event.target.closest?.('[role=tab]:not([data-ubif-board-tab])');
     if (active && native) deactivate();

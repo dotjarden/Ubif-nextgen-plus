@@ -23,18 +23,39 @@
     if (/^(?:[Ii]-\d{10}|(?:[A-Za-z]-)?\d{4,6}-\d{10})$/.test(q)) requests.push(get('Serial numbers', `boh/inventory/${enc(q)}?includeQuarantineInfo=false&includeSalvageInfo=false`, 'serial'));
     return requests;
   }
+  function statusTone(value) {
+    if (/^(Not confirmed)$/i.test(value)) return 'warn';
+    if (/^(Confirmed)$/i.test(value)) return 'success';
+    if (/missed|cancelled/i.test(value)) return 'error';
+    if (/need to order|awaiting|abandoned/i.test(value)) return 'orange';
+    if (/initial check|ready|diagnostic|progress|quality|repair summary/i.test(value)) return 'green';
+    if (/sale complete/i.test(value)) return 'dark';
+    return 'light';
+  }
+  function tags(record, kind) {
+    const result = [], add = (text, tone = 'light') => { if (typeof text === 'string' && text.trim() && !result.some(t => t.text === text)) result.push({ text, tone }); };
+    const clients = {1:'UBIF',2:'Verizon',3:'AT&T',4:'Cricket',5:'Amazon',6:'Cox',7:'USCC',8:'Bell',9:'Google',10:'Verizon'};
+    if (record.clientId != null) add(clients[record.clientId] || 'Unknown client', clients[record.clientId] ? 'dark' : 'light');
+    add(record.programName || record.program?.name, /asurion/i.test(record.programName || record.program?.name || '') ? 'purple' : 'light');
+    add(record.source, 'dark');
+    const status = record.workorderStatusName || record.workorderStatus?.name || record.arrivalStatus?.name || record.SerialStatus;
+    add(status, statusTone(status || ''));
+    if (record.claimNumber) add(`Claim ${record.claimNumber}`, 'light');
+    if (kind === 'arrivals') add(record.appointment && record.appointment !== '--' ? 'Appointment' : 'Arrival', 'light');
+    return result;
+  }
   function rows(request, json, query) {
     const list = request.kind === 'workorders' ? json?.workOrders : request.kind === 'arrivals' ? json?.data : request.kind === 'serial' ? (json?.ItemNumber ? [json] : []) : json;
     if (!Array.isArray(list)) throw new Error('Unexpected search response');
     return list.map(r => {
       switch (request.kind) {
         case 'customers': return { key: `customer:${r.clientId || 1}:${r.id}`, title: r.fullName || [r.firstName, r.lastName].filter(Boolean).join(' '), detail: [r.primaryPhone, r.primaryEmail].filter(Boolean).join(' · '), href: r.customerTypeId === 2 ? `/admin/business-clients/${enc(r.id)}` : `/customer/${enc(r.id)}?${new URLSearchParams({ searchTerm: query, showBreadcrumb: 'true', clientId: r.clientId || 1 })}` };
-        case 'workorders': return { key: `wo:${r.workorderId}`, title: `WO #${r.workorderId} · ${r.customer?.fullName || ''}`, detail: [r.deviceCatalog?.name, r.workorderStatusName, r.claimNumber].filter(Boolean).join(' · '), href: `/repair/workorder/${enc(r.workorderId)}` };
+        case 'workorders': return { key: `wo:${r.workorderId}`, title: `WO #${r.workorderId} · ${r.customer?.fullName || ''}`, detail: [r.deviceCatalog?.name].filter(Boolean).join(' · '), href: `/repair/workorder/${enc(r.workorderId)}` };
         case 'items': return { buyback: { sku: String(r.itemNumber) }, key: `item:${r.itemNumber}`, title: r.name || r.itemNumber, detail: [r.itemNumber, r.AvailableQuantity == null ? '' : `${r.AvailableQuantity} available`].filter(Boolean).join(' · '), href: `/boh/inventory/store-products/${enc(r.itemNumber)}` };
-        case 'arrivals': return { key: `arrival:${r.arrivalId}`, title: r.customer?.fullName || `Arrival #${r.arrivalId}`, label: r.appointment && r.appointment !== '--' ? 'Appointment' : 'Arrival', detail: [r.customerDevice?.deviceName, r.arrivalStatus?.name, r.appointment].filter(Boolean).join(' · '), href: `/check-in/arrivals/${enc(r.arrivalId)}` };
-        case 'serial': return { ...(String(r.SerialStatus).trim().toLowerCase() === 'sold' ? { buyback: { sku: String(r.ItemNumber), serial: query } } : {}), key: `serial:${query}`, title: r.ProductName || r.ItemNumber, detail: [query, r.SerialStatus, r.Store].filter(Boolean).join(' · '), href: `/boh/inventory/store-products/${enc(r.ItemNumber)}` };
+        case 'arrivals': return { key: `arrival:${r.arrivalId}`, title: r.customer?.fullName || `Arrival #${r.arrivalId}`, label: r.appointment && r.appointment !== '--' ? 'Appointment' : 'Arrival', detail: [r.customerDevice?.deviceName, r.appointment].filter(Boolean).join(' · '), href: `/check-in/arrivals/${enc(r.arrivalId)}` };
+        case 'serial': return { ...(String(r.SerialStatus).trim().toLowerCase() === 'sold' ? { buyback: { sku: String(r.ItemNumber), serial: query } } : {}), key: `serial:${query}`, title: r.ProductName || r.ItemNumber, detail: [query, r.Store].filter(Boolean).join(' · '), href: `/boh/inventory/store-products/${enc(r.ItemNumber)}` };
       }
-    });
+    }).map((row, index) => ({ ...row, tags: tags(list[index], request.kind) }));
   }
   globalThis.UBIFPlusSearch = { categories, plan, rows };
 })();

@@ -58,6 +58,7 @@ test('settings fall back to defaults, keep known keys only, and clamp the number
   const S = dom.window.UBIFPlusSettings;
   const defaults = await S.get();
   assert.deepEqual(JSON.parse(JSON.stringify(defaults)), {
+    messages: true, messageShortcuts: true, employeeName: true, employeeFirstName: '', checkin: true, checkinBattery: true, searchInlineTags: true,
     search: true, board: true, scanner: true, columns: true, support: true, hideHomeCalendar: false,
     searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true,
     boardRefreshSec: 60, boardIncludeTomorrow: false,

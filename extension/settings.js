@@ -6,6 +6,13 @@
   'use strict';
   const KEY = 'ubif-plus.settings.v1';
   const defaults = Object.freeze({
+    messages: true,
+    messageShortcuts: true,
+    employeeName: true,
+    employeeFirstName: '',
+    checkin: true,
+    checkinBattery: true,
+    searchInlineTags: true,
     search: true,
     board: true,
     scanner: true,
@@ -55,6 +62,7 @@
       for (const key of Object.keys(defaults)) {
         if (!(key in raw)) continue;
         if (typeof defaults[key] === 'boolean') next[key] = truthy(raw[key]);
+        else if (typeof defaults[key] === 'string') next[key] = String(raw[key] || '').trim().slice(0, 80);
         else { const value = Number(raw[key]); if (Number.isFinite(value)) next[key] = value; }
       }
     }

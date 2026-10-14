@@ -278,8 +278,8 @@
       ${root}>thead,${root}>tfoot{display:block!important;min-width:100%;width:max(100%, ${minWidth}px);}
       ${root}>tbody{display:flex!important;flex-direction:column!important;min-width:100%;width:max(100%, ${minWidth}px);}
       ${root}>*>tr{display:grid!important;grid-template-columns:${template}!important;min-width:100%;}
-      ${root}>*>tr>th,${root}>*>tr>td{box-sizing:border-box;min-width:0!important;max-width:none!important;width:auto!important;grid-row:1;padding-left:28px!important;padding-right:16px!important;}
-      ${root}>*>tr>td[colspan]:not([colspan="1"]){display:block!important;grid-column:1/-1!important;}
+      ${root}>*>tr>th,${root}>*>tr>td{box-sizing:border-box;min-width:0!important;max-width:none!important;width:auto!important;grid-row:1;border-radius:0!important;border-left:0!important;border-right:0!important;padding-left:28px!important;padding-right:16px!important;}
+      ${root}>*>tr>td[colspan]:not([colspan="1"]){display:block!important;grid-column:1/-1!important;border-left:1px solid var(--aui-outline-soft,#eeedf1)!important;border-right:1px solid var(--aui-outline-soft,#eeedf1)!important;}
       ${root} th{position:relative!important;padding-left:28px!important;}
       ${root} [data-ubif-handle]{position:absolute;z-index:2;touch-action:none;}
       ${root} [data-ubif-handle="move"]{left:5px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--aui-on-surface-soft,#707070);padding:4px;cursor:grab;opacity:0;font:18px/1 system-ui;}
@@ -328,6 +328,14 @@
       css += index < 0
         ? `${root} [data-ubif-extra="${cellCss(id)}"]{display:none!important;}`
         : `${root} [data-ubif-extra="${cellCss(id)}"]{grid-column:${index + 1}!important;}`;
+    }
+    for (const [id, edge] of [[visible[0], 'left'], [visible.at(-1), 'right']]) {
+      if (!id) continue;
+      const nativeIndex = columns.findIndex(c => c.id === id);
+      const cell = nativeIndex >= 0 ? `:nth-child(${nativeIndex + 1})` : `[data-ubif-extra="${cellCss(id)}"]`;
+      css += `${root}>*>tr>th${cell},${root}>*>tr>td${cell}:not([colspan]){border-${edge}:1px solid var(--aui-outline-soft,#eeedf1)!important;}`;
+      css += `${root}>thead>tr:first-child>th${cell}{border-top-${edge}-radius:var(--aui-border-radius-100,8px)!important;}
+        ${root}>tbody>tr:last-child>td${cell}{border-bottom-${edge}-radius:var(--aui-border-radius-100,8px)!important;}`;
     }
     css += `
       ${root} [data-ubif-extra] .ubif-x{display:block;min-width:0;}

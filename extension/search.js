@@ -10,7 +10,7 @@
   const owns = () => document.documentElement.dataset.ubifPlusSearchOwner === owner;
   const { categories, plan, rows } = globalThis.UBIFPlusSearch;
   const S = globalThis.UBIFPlusSettings;
-  const fallback = { search: true, searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true, searchBuyback: true };
+  const fallback = { search: true, searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true, searchBuyback: true, searchInlineTags: true };
   let config = { ...fallback };
   const categoryKeys = { Customers: 'searchCustomers', 'Work orders': 'searchWorkOrders', Items: 'searchItems', Claims: 'searchClaims', 'Serial numbers': 'searchSerials' };
   const enabledCategories = () => categories.filter(name => config[categoryKeys[name]] !== false);
@@ -30,7 +30,7 @@
     header .components-header-searchbox:has(> #ubif-universal-search) { flex:1 1 auto; min-width:0; max-width:480px; }
     #ubif-universal-search { position:relative; width:100%; min-width:0; max-width:480px; font:inherit; color:var(--aui-on-surface,#222); }
     #ubif-universal-search[data-ubif-slot=header] { flex:0 1 420px; width:auto; min-width:200px; max-width:520px; }
-    #ubif-universal-search input { box-sizing:border-box; width:100%; min-height:48px; border:1px solid var(--aui-outline,#bbb); border-radius:12px; padding:12px; font:inherit; color:inherit; background:var(--aui-elevated-level-01,#fff); }
+    #ubif-universal-search input { box-sizing:border-box; width:100%; min-height:48px; border:1px solid var(--aui-outline,#bbb); border-radius:var(--aui-border-radius-100,8px); padding:12px; font:inherit; color:inherit; background:var(--aui-elevated-level-01,#fff); }
     #ubif-universal-search input:focus { outline:2px solid var(--aui-primary,#8224ce); outline-offset:2px; }
     /* The browser's own clear button would sit beside ours, so only ours shows,
        and it only shows when there is something to clear. */
@@ -41,18 +41,29 @@
     /* An empty field keeps the whole line for its placeholder; the clear button
        only claims its 34px once there is text to clear. */
     #ubif-universal-search:not([data-ubif-empty]) input { padding-right:34px; }
-    #ubif-search-results { position:absolute; top:calc(100% + 8px); left:0; width:min(640px,calc(100vw - 32px)); box-sizing:border-box; max-height:70vh; overflow:auto; z-index:1100; padding:16px; border:1px solid var(--aui-outline,#ddd); border-radius:16px; background:var(--aui-elevated-level-03,#fff); box-shadow:0 8px 32px #0003; }
+    #ubif-search-results { position:absolute; top:calc(100% + 8px); left:0; width:min(640px,calc(100vw - 32px)); box-sizing:border-box; max-height:70vh; overflow:auto; z-index:1100; padding:12px; border:1px solid var(--aui-outline,#ddd); border-radius:var(--aui-border-radius-200,12px); background:var(--aui-elevated-level-03,#fff); box-shadow:0 8px 32px #0003; }
     #ubif-search-results[hidden] { display:none; }
-    #ubif-search-results h3 { font:inherit; font-weight:bold; margin:16px 0 6px; }
+    #ubif-search-results h3 { font:inherit; font-weight:600; font-size:13px; color:var(--aui-on-surface-soft,#615b6b); margin:16px 4px 6px; }
     #ubif-search-results p { margin:6px 0; font-size:14px; }
     #ubif-search-results a { display:block; padding:10px; border-radius:8px; color:inherit; text-decoration:none; overflow-wrap:anywhere; }
     #ubif-search-results a:hover, #ubif-search-results a:focus { background:var(--aui-primary-container,#eee2f9); outline:2px solid var(--aui-primary,#8224ce); }
-    #ubif-search-results .ubif-result-label { display:block; font-size:12px; font-weight:600; color:var(--aui-on-surface-soft,#5d5e61); margin-bottom:4px; }
+
     #ubif-search-results .ubif-result-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
     #ubif-search-results .ubif-result-row > a { flex:1 1 200px; min-width:0; }
     #ubif-search-results .ubif-buyback-action { flex:0 0 auto; padding:7px 10px; border:1px solid var(--aui-outline,#bbb); border-radius:8px; background:var(--aui-elevated-level-01,#fff); font-size:12px; }
     #ubif-search-results .ubif-buyback-action:focus-visible { outline:2px solid var(--aui-primary,#8224ce); }
     #ubif-search-results .ubif-result-row > #ubif-buyback { flex-basis:100%; margin:0 10px 8px; }
+    #ubif-search-results .ubif-result-heading {display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;line-height:1.3;color:var(--aui-on-surface,#252629)}
+    #ubif-search-results .ubif-result-tags {display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+    #ubif-search-results .ubif-result-tag {display:inline-flex;align-items:center;line-height:1.2;padding:3px 6px;font-size:12px;border-radius:var(--aui-border-radius-050,4px);background:var(--aui-neutral-soft,#eeeef0);color:var(--aui-on-neutral-soft,#252629)}
+    #ubif-search-results .ubif-result-tag[data-tone=green] {background:var(--aui-accent-green,#d0f1d8);color:var(--aui-accent-on-green,#153d24)}
+    #ubif-search-results .ubif-result-tag[data-tone=orange] {background:var(--aui-accent-orange,#ffd2a6);color:var(--aui-accent-on-orange,#522b0b)}
+    #ubif-search-results .ubif-result-tag[data-tone=purple] {background:var(--aui-accent-purple,#ead2ff);color:var(--aui-accent-on-purple,#3c165b)}
+    #ubif-search-results .ubif-result-tag[data-tone=dark] {background:var(--aui-inverse-surface,#252629);color:var(--aui-inverse-on-surface,#fff)}
+    #ubif-search-results .ubif-result-tag[data-tone=error] {background:var(--aui-status-error,#bf2032);color:var(--aui-status-on-error,#fff)}
+    #ubif-search-results .ubif-result-tag[data-tone=success] {background:var(--aui-status-success,#237a42);color:var(--aui-status-on-success,#fff)}
+    #ubif-search-results .ubif-result-tag[data-tone=warn] {background:var(--aui-status-warning,#ffdf74);color:var(--aui-status-on-warning,#332b13)}
+    #ubif-search-results section + section { border-top:1px solid var(--aui-outline-soft,#dedbe3); margin-top:10px; }
     #ubif-search-results small { display:block; margin-top:4px; }
   `;
   document.head.append(style);
@@ -82,7 +93,11 @@
     if (input.placeholder !== next) input.placeholder = next;
   };
   if (typeof ResizeObserver === 'function') new ResizeObserver(entries => fitPlaceholder(entries[0].contentRect.width)).observe(root);
-  function open(value) { panel.hidden = !value; input.setAttribute('aria-expanded', String(value)); if (!value) globalThis.UBIFPlusBuyback?.cancel(); }
+  function positionPanel() {
+    const left = root.getBoundingClientRect().left, width = Math.min(640, Math.max(0, innerWidth - 32));
+    panel.style.left = `${Math.max(16, Math.min(left, innerWidth - width - 16)) - left}px`;
+  }
+  function open(value) { if (value) positionPanel(); panel.hidden = !value; input.setAttribute('aria-expanded', String(value)); if (!value) globalThis.UBIFPlusBuyback?.cancel(); }
   const rowNodes = new Map();
   function stop() { clearTimeout(timer); controller?.abort(); generation++; rowNodes.clear(); globalThis.UBIFPlusBuyback?.cancel(); }
   /* A search that finishes between a press and its release rebuilds the panel
@@ -121,10 +136,15 @@
         if (wrapper) { section.append(wrapper); continue; }
         wrapper = el('div', '', { class: 'ubif-result-row' });
         rowNodes.set(`${group.name}:${row.key}`, wrapper);
-        const link = el('a', row.title, { href: row.href });
+        const link = el('a', '', { href: row.href });
+        link.append(el('span', row.title, { class: 'ubif-result-heading' }));
         if (config.searchNewTab) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
-        if (row.label) link.prepend(el('span', row.label, { class: 'ubif-result-label' }));
         if (row.detail) link.append(el('small', row.detail));
+        if (config.searchInlineTags !== false && row.tags?.length) {
+          const tags = el('div', '', { class: 'ubif-result-tags' });
+          for (const tag of row.tags) tags.append(el('span', tag.text, { class: `ubif-result-tag${tag.text === row.label ? ' ubif-result-label' : ''}`, 'data-tone': tag.tone }));
+          link.append(tags);
+        }
         link.addEventListener('click', () => globalThis.UBIFPlusBuyback?.cancel());
         wrapper.append(link);
         if (config.searchBuyback && row.buyback) {
@@ -271,7 +291,7 @@
   let resizeTimer;
   addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { if (config.search) mount(); }, 150);
+    resizeTimer = setTimeout(() => { if (config.search) { mount(); if (!panel.hidden) positionPanel(); } }, 150);
   });
   window.addEventListener('popstate', () => { stop(); input.value = ''; syncClear(); groups = []; open(false); });
   mount();

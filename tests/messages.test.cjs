@@ -12,7 +12,7 @@ function boot(t, options = {}) {
   t.after(() => { dom.window.dispatchEvent(new dom.window.Event('pagehide')); dom.window.close(); });
   const w = dom.window, writes = [], calls = [];
   w.chrome = { storage: { local: {
-    get: async () => ({ [KEY]: options.templates }),
+    get: async () => ({ [KEY]: options.templates, 'ubif-plus.rt-templates.v1': options.seeded !== false }),
     set: async value => { if (options.failSave) throw new Error('failed'); writes.push(JSON.parse(JSON.stringify(value))); }
   } } };
   w.fetch = async url => {
@@ -24,6 +24,7 @@ function boot(t, options = {}) {
       customerDevice: { deviceName: 'Pixel 9' }, workorderStatusName: 'Ready for pickup', appointment: '2026-10-12T14:00:00Z'
     } }) };
   };
+  if (options.settings) w.UBIFPlusSettings = options.settings;
   w.eval(read('message-model.js')); w.eval(read('message-ui.js')); w.eval(read('messages.js'));
   const root = () => w.document.querySelector('[data-ubif-message-templates]')?.shadowRoot;
   const click = label => { const node = [...root().querySelectorAll('button')].find(n => n.textContent === label); assert.ok(node, label); node.click(); };
@@ -316,4 +317,37 @@ test('already-open chat reads the matching mounted arrival and tracks appointmen
   assert.equal(sent.at(-1).record.appointment, '');
   state.chat = { customerId: 82, customerName: 'Other Customer' }; listener();
   assert.equal(sent.at(-1).record.appointment, undefined);
+});
+
+test('RT templates seed existing libraries once and preserve customized templates', async t => {
+  const { w, writes } = boot(t, { seeded: false, templates: [{ id: 'custom', name: 'Custom', body: 'Saved text' }] });
+  await flush(w);
+  const saved = writes[0];
+  assert.equal(saved['ubif-plus.rt-templates.v1'], true);
+  assert.equal(saved[KEY][0].body, 'Saved text');
+  assert.deepEqual(saved[KEY].slice(1).map(t => t.id), ['rt-iphone', 'rt-android']);
+  const M = w.UBIFPlusMessageModel;
+  const values = { 'employee.firstName': 'Jordan', 'appointment.date': 'Oct 15 at 10 AM' };
+  assert.match(M.render(saved[KEY][1].body, values).text, /This is Jordan.*Oct 15 at 10 AM.*Stolen Protection/);
+  assert.doesNotMatch(M.render(saved[KEY][2].body, values).text, /Stolen Protection/);
+});
+
+test('template host returns to the composer after Portal inserts a refreshed conversation', async t => {
+  const { w, root } = boot(t, { html: '<aside data-message-sidebar><h2>Messages</h2><div id="history">Old conversation</div><form><textarea></textarea><button aria-label="Send message">Send</button></form></aside>' });
+  await flush(w);
+  const panel = w.document.querySelector('aside'), host = root().host, form = panel.querySelector('form');
+  const refreshed = w.document.createElement('div'); refreshed.textContent = 'New message'; form.before(refreshed);
+  await flush(w);
+  assert.equal(host.nextElementSibling, form);
+  assert.equal(refreshed.nextElementSibling, host);
+  assert.equal(panel.querySelectorAll('[data-ubif-message-templates]').length, 1);
+});
+
+test('message settings hide shortcuts and remove the template UI live', async t => {
+  let apply;
+  const { w, root } = boot(t, { settings: { subscribe: fn => { apply = fn; }, get: async () => ({ messages: true, messageShortcuts: false, employeeFirstName: 'Jordan' }) } });
+  await flush(w);
+  assert.equal(root().querySelectorAll('.shortcut').length, 0);
+  apply({ messages: false }); await flush(w);
+  assert.equal(root(), undefined);
 });

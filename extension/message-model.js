@@ -11,6 +11,7 @@
     catch { return parsed.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }); }
   };
   const fields = [
+    ['employee.firstName', 'Employee first name', 'Employee'],
     ['customer.firstName', 'First name', 'Customer'], ['customer.name', 'Full name', 'Customer'],
     ['customer.phone', 'Phone', 'Customer'], ['customer.email', 'Email', 'Customer'],
     ['device.name', 'Device', 'Device'], ['device.model', 'Model', 'Device'],
@@ -51,7 +52,9 @@
   const defaults = [
     { id: 'update', name: 'Repair update', body: 'Hi {{customer.firstName|there}}, here is an update on {{device.name|your device}}: ' },
     { id: 'pickup', name: 'Ready for pickup', body: 'Hi {{customer.firstName|there}}, {{device.name|your device}} is ready for pickup. Please contact us if you have any questions.' },
-    { id: 'appointment', name: 'Appointment reminder', body: 'Hi {{customer.firstName|there}}, this is a reminder about your repair appointment: {{appointment.date}}. Please contact us if you need to reschedule.' }
+    { id: 'appointment', name: 'Appointment reminder', body: 'Hi {{customer.firstName|there}}, this is a reminder about your repair appointment: {{appointment.date}}. Please contact us if you need to reschedule.' },
+    { id: 'rt-iphone', name: 'RT iPhone', body: 'Hello! This is {{employee.firstName}} with uBreakiFix. I was just calling to confirm your appointment for {{appointment.date}} with one of our mobile techs. Whenever they are on the way, they will text you and let you know their ETA. Please make sure to have Stolen Protection turned off before the technician arrives. If you have any questions, you can reach back out to us, OR if you need to reschedule you can do so by reaching out to Asurion. Thank you, and have a great day!' },
+    { id: 'rt-android', name: 'RT Android', body: 'Hello! This is {{employee.firstName}} with uBreakiFix. I was just calling to confirm your appointment for {{appointment.date}} with one of our mobile techs. Whenever they are on the way, they will text you and let you know their ETA. If you have any questions, you can reach back out to us, OR if you need to reschedule you can do so by reaching out to Asurion. Thank you, and have a great day!' }
   ];
   function sanitize(value) {
     if (!Array.isArray(value)) return defaults.map(row => ({ ...row }));

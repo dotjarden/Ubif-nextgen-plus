@@ -4,7 +4,7 @@
   'use strict';
   if (globalThis.__ubifPlusMessagesPage) return;
   globalThis.__ubifPlusMessagesPage = true;
-  let launch = null, serial = 0, previous = '', bound = null;
+  let launch = null, serial = 0, previous = '', bound = null, employeePrevious = null;
   const text = value => typeof value === 'string' || typeof value === 'number' ? String(value) : '';
   function readCard(node, expectedCustomer = '') {
     let found = null;
@@ -67,7 +67,11 @@
   }
   function publish(module) {
     try {
-      const state = module.store.getState(), open = module.selectChatPanelOpen(state), chat = module.selectChatPanelData(state);
+      const state = module.store.getState();
+      const user = module.selectCurrentUser?.(state) || module.selectUser?.(state) || state.currentUser || state.auth?.user || state.session?.user || state.user?.profile || state.user;
+      const firstName = text(user?.firstName || user?.givenName || user?.employee?.firstName).trim();
+      if (employeePrevious !== firstName) { employeePrevious = firstName; window.postMessage({ source: 'ubif-plus', type: 'employee-context', firstName }, '*'); }
+      const open = module.selectChatPanelOpen(state), chat = module.selectChatPanelData(state);
       if (!open) launch = null;
       const customerId = text(chat?.customerId);
       // Recover when chat was already open before injection, the click was
@@ -102,7 +106,7 @@
   }
   document.addEventListener('click', capture, true);
   addEventListener('message', event => {
-    if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'message-context-request') { previous = ''; connect(); }
+    if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'message-context-request') { previous = ''; employeePrevious = null; connect(); }
   });
   setInterval(connect, 500);
   connect();

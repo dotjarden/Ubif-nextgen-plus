@@ -150,3 +150,15 @@ Toggle **Universal search → Buyback buttons in search** in extension settings.
 Before navigating, the serial must still belong to the SKU, have Sold status, a sales order number, and a work order link. The shortcut uses Portal’s mounted cart action, including its eligibility/permission checks, buyback cart updates, and configured printer. An unavailable or disabled action leaves you on the work order with an explanation. “Print requested” means Portal received the action; check its printer/error messages for the actual result. The shortcut never automatically retries a print.
 
 A pending request stays only in this tab’s session storage, expires after one minute, and is removed before printing. Reloading the work order does not reprint. Native printer output still needs validation in a signed-in Portal tab.
+
+### Employee names, RT confirmations, and feature settings
+
+The template detail picker includes **Employee first name**. **RT iPhone** and **RT Android** are added once to existing libraries, with the appointment date and time and employee name filled in when available. The iPhone confirmation includes the Stolen Protection reminder. Existing templates remain editable; deleting an RT template after migration keeps it deleted. Missing names or appointment times are requested before insertion.
+
+In **Settings → Messages & employee**, enable message templates, show or hide the first two quick shortcuts, replace the header profile icon with an employee name button that opens the same account menu, and set a local first-name override. An empty override uses the signed-in profile when the Portal exposes it. Names from the Portal remain in memory. The template library is managed in the message sidebar.
+
+**Settings → Check-in** controls Extra Details and its required-field check, and the Battery not working shortcut. Disabling Extra Details leaves existing notes intact. **Settings → Universal search → Inline result tags** shows program, source, status, and claim details inside each result using the Portal’s tag colors. Category source toggles still control which searches run.
+
+The template bar follows the composer after conversation rerenders. Table side borders and rounding follow the first and last visible columns after reordering or hiding fields. Update Today uses the native tab label typography, spacing, muted inactive text, and 4px on-surface active indicator.
+
+The employee header anchor (`.components-header-opts-avatar`), signed-in name (`selectUser(state).givenName`), native tab structure, and inline result tag colors were checked against the R92.4 Portal components and its Asurion UI bundle.

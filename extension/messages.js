@@ -7,10 +7,13 @@
   const M = globalThis.UBIFPlusMessageModel;
   if (!M) return;
   const KEY = 'ubif-plus.message-templates.v1';
+  const SEED = 'ubif-plus.rt-templates.v1';
+  const S = globalThis.UBIFPlusSettings;
+  let config = { messages: true, messageShortcuts: true };
   const area = globalThis.chrome?.storage?.local;
   let shared = null;
   let templates = M.sanitize(), loaded = false, panel = null, host = null, context = {}, contextState = 'unavailable', currentId = '', requestId = '', generation = 0;
-  let refreshPreview = () => {}, pending = false, suspended = false;
+  let refreshPreview = () => {}, updateSettingsUI = () => {}, pending = false, suspended = false;
   const el = (tag, text, attrs = {}) => {
     const node = document.createElement(tag);
     if (text) node.textContent = text;
@@ -97,6 +100,7 @@
   }
   function mount() {
     if (suspended || !loaded || !document.body) return;
+    if (config.messages === false) { host?.remove(); host = null; panel = null; generation++; return; }
     const next = findPanel();
     if (next !== panel || host && !host.isConnected) {
       host?.remove(); panel = next; host = null; currentId = ''; requestId = ''; context = {}; generation++;
@@ -107,7 +111,13 @@
         host.attachShadow({ mode: 'open' }); paint();
       }
     }
-    if (panel) loadContext();
+    if (panel && host) {
+      const input = composer(panel), form = input?.closest('form');
+      const anchor = form && form.parentElement === panel ? form : input;
+      // React may insert the refreshed conversation after our unmanaged host.
+      if (anchor && (host.parentElement !== anchor.parentElement || host.nextElementSibling !== anchor)) anchor.before(host);
+      loadContext();
+    }
   }
   function schedule() {
     if (suspended || pending) return;
@@ -118,12 +128,13 @@
     const ui = globalThis.UBIFPlusMessageUI.create(host.shadowRoot, {
       model: M,
       getTemplates: () => templates,
+      getShortcuts: () => config.messageShortcuts !== false,
       getHeight: view => {
         const top = host.getBoundingClientRect().top - panel.getBoundingClientRect().top;
         const header = panel.firstElementChild === host ? 0 : panel.firstElementChild?.getBoundingClientRect().height || 0;
         return top > 0 ? Math.max(100, Math.min(420, top - header - 64 - (view === 'editor' ? 56 : 0))) : 360;
       },
-      getContext: () => ({ key: currentId, values: context, loading: contextState === 'loading' }),
+      getContext: () => ({ key: currentId, values: { ...context, 'employee.firstName': globalThis.UBIFPlusEmployee?.firstName || config.employeeFirstName || '' }, loading: contextState === 'loading' }),
       getDraft: () => { const input = composer(panel); return input?.tagName === 'TEXTAREA' ? input.value : input?.textContent || ''; },
       save: async next => {
         if (!area) throw new Error('Template storage unavailable');
@@ -148,6 +159,7 @@
       }
     });
     refreshPreview = reset => ui.update(reset);
+    updateSettingsUI = () => ui.updateSettings();
   }
   const start = () => {
     loaded = true; schedule();
@@ -173,6 +185,23 @@
     }
     schedule();
   });
-  if (area) area.get(KEY).then(value => { templates = M.sanitize(value?.[KEY]); start(); }, start);
+  const applySettings = next => {
+    const changed = config.messageShortcuts !== next.messageShortcuts;
+    config = next; schedule(); refreshPreview();
+    if (host && changed) updateSettingsUI();
+  };
+  if (S) { S.subscribe(applySettings); S.get().then(applySettings, () => {}); }
+  addEventListener('ubif-plus-employee', () => refreshPreview());
+  if (globalThis.chrome?.storage?.onChanged) chrome.storage.onChanged.addListener((changes, scope) => {
+    if (scope === 'local' && changes[KEY]) { templates = M.sanitize(changes[KEY].newValue); if (host) updateSettingsUI(); }
+  });
+  if (area) area.get([KEY, SEED]).then(async value => {
+    templates = M.sanitize(value?.[KEY]);
+    if (!value?.[SEED]) {
+      for (const row of M.defaults.filter(row => row.id.startsWith('rt-'))) if (!templates.some(t => t.id === row.id)) templates.push({ ...row });
+      await area.set({ [KEY]: templates, [SEED]: true });
+    }
+    start();
+  }).catch(start);
   else start();
 })();
