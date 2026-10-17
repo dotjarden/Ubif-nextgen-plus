@@ -8,7 +8,7 @@ Detailed behavior and limitations for UBIF NextGen Plus.
 
 Click the extension's toolbar icon for settings, then use the category navigation or **Find a setting** to locate a control. **Open in tab** opens the same controls in a browser tab; Chrome's extension **Options** opens that page too. Settings save immediately and apply to open portal tabs. Related controls are disabled when their parent feature is off, and each category has its own reset button. A failed save restores the previous value and displays an error.
 
-- **Home**: hide the Home calendar to give Quick actions and Today's to-do's more room.
+- **Home**: hide the Home calendar to give Quick actions and Today's to-do's more room, and turn the [sidebar improvements](#sidebar-090) on or off.
 - **Universal search**: enable search, configure the shortcut, delay (100–2,000 ms) and minimum query length (3–10), choose each of the five result categories, and open results in new tabs. Disabled categories make no search requests. Work orders still require at least 5 digits and claims at least 6 characters.
 - **Update Today**: enable the board, include tomorrow by default, toggle periodic refresh and set its interval (15–600 seconds), allow status drag and drop, and show or hide empty status columns. Opening or returning to the board still refreshes it with periodic refresh off.
 - **Barcode scanning**: enable scanning, independently control opening work orders/portal links and forwarding other scans to search, enable purchase-order receiving, and choose automatic OEM field focus and confirmation. Turning confirmation off leaves valid serials for manual review.
@@ -18,6 +18,19 @@ Click the extension's toolbar icon for settings, then use the category navigatio
 Existing preferences are preserved. New settings retain the previous behavior by default; opening search results in a new tab is off by default. Category resets only restore that category's preferences, leaving saved column layouts intact. **Feature request** and **Buy me a coffee** open in new tabs.
 
 Settings live in one extension-local storage record (`ubif-plus.settings.v1`) shared by the popup and full settings page. No new permissions are required for the settings page.
+
+## Sidebar (0.9.0)
+
+The portal's left navigation keeps its own markup and state; the extension only labels and restyles it. Turn it off in **Settings → Home → Sidebar improvements**.
+
+- **Spacing**: rows are 40 px with a 2 px gap (the portal uses 48 px with 8 px), More sub-items are 34 px, and the More chevron sits at the row's edge, so the list fits shorter windows without scrolling.
+- **Bottom group**: Support Ticket, Enhancement Idea and then More — the last item, with its menu opening below it — sit together at the bottom of the sidebar, just above the collapse arrow, in both the expanded and collapsed views. The main destinations stay at the top; the list still scrolls when an open More menu does not fit.
+- **Collapsed rail**: each icon has a tooltip and an accessible name taken from its expanded label (Dashboard, Arrivals, Workorders, …). The collapse button announces **Collapse/Expand navigation** and its state; the More chevron reports whether its menu is open.
+- **More**: the whole row opens or closes its menu. Natively only the small chevron does, and the rest of the row is a link to Dashboard. In the collapsed rail, More expands the sidebar and opens its menu.
+- **Support Ticket and Enhancement Idea**: these come from an Appcues embed, not the portal. They now use the portal font, theme colours (including dark mode), the same row size and hover state, gain ticket and lightbulb icons, sit just above More, and show icon-only with tooltips when collapsed instead of clipped text.
+- **Collapse choice**: the portal re-forces open/closed whenever the window width changes. On windows at least 1,280 px wide, the last choice you made with the collapse button is put back after a resize. Narrower windows keep the portal's overlay behaviour.
+
+Contracts were read from the public R92.4 `ubif-components.js` (Nav), `ubif-util-store.js` (`layout.nav.closed`, `layout.more.closed`) and the live Appcues shadow root. Automated fixtures cover labels, More, Appcues re-renders, resize restoration and the setting.
 
 ## Update Today board (0.5.0)
 
@@ -45,6 +58,8 @@ Scan a work-order barcode on portal pages outside purchase-order receiving to op
 
 Every other rapid scan is routed instead of dropped: an item barcode, an IMEI or serial number, a phone number, a claim reference or a name is handed to universal search, which opens with that value already typed and its results panel showing; the scanner's **Enter** is consumed so the panel stays open. A portal QR code for any other route — an item, a purchase order, a customer — opens that route. External links, prose-like text, very short values and ordinary typing are left alone, and with Universal search or Barcode scanning switched off a scan behaves like ordinary keystrokes again.
 
+**Portal scan fields win.** The portal reads scans itself through a window `keypress` detector and a `scanDetected` event. While one of its consumers is on screen, scans are left to the portal instead of universal search: an open side panel (`role="status"`, `aria-live="assertive"`, `aria-hidden="false"`, such as check-in **Add Arrival** / **Schedule Appointment**) or Asurion modal containing an input or scan field, or a visible **Scan or enter item label** field (barcode icon), Repair Estimate scan field or check-out refund screen. Inside an open panel, numeric scans never open a work order; a scan field on the page itself still lets work-order numbers and portal links open. A Tab-terminated scan there is delivered as one native `scanDetected` event, since the portal's detector only ends on Enter. Typing into universal search always stays in search.
+
 Use a keyboard-mode barcode scanner configured to end each scan with **Enter** or **Tab**. Detection requires a rapid burst (at most 80 ms between keys and a 40 ms average including the terminator). Ordinary typing retains its normal behavior. When scanning into an input or textarea, its previous value and selection are restored before navigation or search. Outside purchase-order receiving, other barcode types still use the portal's existing workflows. Scanning inside an embedded frame is not supported.
 
 Reload the extension and the portal after updating. Scanner routing is covered by automated tests; physical scanner timing still needs verification with your scanner.
@@ -59,7 +74,7 @@ Appointment and Arrival results retain a plain type label. A unique customer mat
 
 Authenticated customer, item, claim/workorder, and arrival endpoint response shapes were verified in Search.app. Automated tests use representative fixtures. The updated extension still needs reloading in the browser; its full live UI and serial results have not been verified.
 
-## Customer message templates (unreleased)
+## Customer message templates (0.9.0)
 
 Arrivals and Workorders use the same customer chat sidebar. Two compact shortcuts sit above the existing message box, beside **Templates**. Click a shortcut to fill the message box with the selected customer’s details, then press the Portal’s Send button. **Templates** opens a searchable library above the shortcuts without pushing the composer off-screen. Each row shows a preview with the selected customer's details and an **Edit** action. Definitions are saved locally for this browser profile; customer records and resolved previews are never persisted. Existing v1 templates remain compatible. Reload the extension and refresh the Portal tab after updating.
 

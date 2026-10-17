@@ -59,7 +59,7 @@ test('settings fall back to defaults, keep known keys only, and clamp the number
   const defaults = await S.get();
   assert.deepEqual(JSON.parse(JSON.stringify(defaults)), {
     messages: true, messageShortcuts: true, employeeName: true, employeeFirstName: '', checkin: true, checkinBattery: true, searchInlineTags: true,
-    search: true, board: true, scanner: true, columns: true, support: true, hideHomeCalendar: false,
+    search: true, board: true, scanner: true, columns: true, support: true, hideHomeCalendar: false, navEnhance: true,
     searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true,
     boardRefreshSec: 60, boardIncludeTomorrow: false,
     searchCustomers: true, searchWorkOrders: true, searchItems: true, searchClaims: true, searchSerials: true, searchNewTab: false, searchBuyback: true,

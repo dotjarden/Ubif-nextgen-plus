@@ -268,3 +268,102 @@ test('Include tomorrow saves through shared settings and restores on load', asyn
   checkbox.click(); await flush();
   assert.equal(writes[0].boardIncludeTomorrow, false);
 });
+
+test('cards show overdue times in the error colour, open from anywhere, and empty statuses become drop targets', async t => {
+  const { w } = await boot(t);
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  const card = root.querySelector('.card');
+  assert.equal(card.querySelector('.badge'), null, 'no redundant Overdue label on a board of due orders');
+  assert.equal(card.querySelector('.due').classList.contains('overdue'), true);
+  assert.match(root.querySelector('.status').textContent, /^1 order · Synced/);
+  const strip = root.querySelector('.empty-lanes');
+  assert.ok(strip.querySelector('.lane[data-status="2"][data-target]'), 'empty droppable statuses sit above the board');
+  assert.equal(root.querySelector('.lanes .lane[data-empty]'), null, 'the board itself only holds statuses with orders');
+  card.querySelector('.customer').click(); await flush();
+  assert.equal(root.querySelector('dialog').open, true);
+});
+
+test('an overdue update time is suggested forward and notes show their links', async t => {
+  const { w, s } = await boot(t);
+  s.notes.push({ noteId: 1, workorderId: 10001234, noteType: 2, noteText: 'please check the original [work order](https://portal.ubif.net/pos/workorder/30190129) or javascript:alert(1)' });
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  root.querySelector('.card button').click(); await flush();
+  const date = root.querySelector('[type=datetime-local]');
+  assert.ok(date.value > M.localInput(new Date()), 'the 2020 time is not offered again');
+  assert.match(root.querySelector('.date-hint').textContent, /^Was due/);
+  assert.equal([...root.querySelectorAll('.chips button')].find(n => n.textContent === 'In 2 days').getAttribute('aria-pressed'), 'true');
+  const links = [...root.querySelectorAll('.notes a')];
+  assert.deepEqual(links.map(a => [a.textContent, a.getAttribute('href'), a.target]), [['work order', 'https://portal.ubif.net/pos/workorder/30190129', '_blank']]);
+  assert.match(root.querySelector('.notes').textContent, /javascript:alert\(1\)/, 'other text stays plain');
+  assert.equal(root.activeElement, root.querySelector('#ubif-board-order-title'), 'focus starts on the title, not Close');
+});
+
+test('Cmd/Ctrl+Enter adds the note being written', async t => {
+  const { w, s } = await boot(t);
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  root.querySelector('.card button').click(); await flush();
+  const note = root.querySelector('[aria-label="New work order note"]');
+  note.value = 'Called customer about the parts ETA';
+  note.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true }));
+  await flush();
+  assert.equal(s.notes[0].noteText, 'Called customer about the parts ETA');
+});
+
+test('Messages toggles Portal conversation and closing the editor closes it too', async t => {
+  const { w } = await boot(t);
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  root.querySelector('.card button').click(); await flush();
+  const posted = [];
+  w.addEventListener('message', event => { if (event.data?.source === 'ubif-plus') posted.push(event.data); });
+  const send = data => w.dispatchEvent(new w.MessageEvent('message', { source: w, data: { source: 'ubif-plus', ...data } }));
+  const dialog = root.querySelector('dialog');
+  const button = root.querySelector('[aria-label="View and send customer messages"]');
+  button.click();
+  send({ type: 'board-chat-result', requestId: dialog.dataset.messageRequest, error: '' });
+  assert.equal(button.textContent, 'Hide messages');
+  assert.equal(button.getAttribute('aria-pressed'), 'true');
+  button.click(); await flush();
+  assert.deepEqual(posted.filter(p => p.type === 'board-chat-close').map(p => p.workorderId), ['10001234']);
+  send({ type: 'message-context', open: false });
+  assert.equal(button.textContent, 'Messages');
+  // Reopen, then close the editor: its conversation goes with it.
+  button.click();
+  send({ type: 'board-chat-result', requestId: dialog.dataset.messageRequest, error: '' });
+  root.querySelector('.close').click(); await flush();
+  assert.equal(posted.filter(p => p.type === 'board-chat-close').length, 2);
+  assert.equal(dialog.open, false);
+});
+
+test('notes kept on the order’s arrival or customer load with the order’s own notes', async () => {
+  const s = server(); const api = M.createAPI(s.fetch);
+  await api.addNote(s.order, 'Order note text');
+  s.notes.push({ noteId: 77, workorderId: null, arrivalId: 5, noteType: 1, noteText: 'Arrival note' });
+  const rows = await api.notes(10001234);
+  assert.deepEqual(copy(rows.map(r => r.noteText)), ['Order note text', 'Arrival note']);
+  s.notes.push({ noteId: 78, workorderId: 99999999, noteType: 2, noteText: 'Other order' });
+  await assert.rejects(api.notes(10001234), /unexpected notes/, 'another order’s note still fails closed');
+});
+
+test('status and next update sit in the header, and saving shows on the button instead of a message bar', async t => {
+  const { w } = await boot(t);
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  root.querySelector('.card button').click(); await flush();
+  const meta = root.querySelector('.dialog-head .head-meta');
+  assert.match(meta.textContent, /Next update/);
+  assert.equal(root.querySelector('.order-meta'), null, 'no separate status band');
+  assert.equal(root.querySelector('.feedback').textContent, '', 'the bar stays empty without a problem');
+  const save = [...root.querySelectorAll('button')].find(n => n.textContent === 'Save update time');
+  save.click();
+  assert.equal(save.classList.contains('busy'), true);
+  assert.equal(save.textContent, 'Saving…');
+  assert.equal(root.querySelector('.feedback').textContent, '');
+  await flush();
+  assert.equal(save.textContent, 'Saved');
+  assert.equal(save.classList.contains('done'), true);
+  assert.match(root.querySelector('dialog [role=status]').textContent, /saved/, 'still announced to screen readers');
+});

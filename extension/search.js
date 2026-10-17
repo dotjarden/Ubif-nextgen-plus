@@ -26,10 +26,11 @@
     /* The field claims the header's spare space up to the width it opens at
        (480px). On a roomy window that is exactly its width; when the window is
        tight it gives up room instead of pushing the portal's own header items
-       (support, store, clock, notifications, avatar) off the screen. */
-    header .components-header-searchbox:has(> #ubif-universal-search) { flex:1 1 auto; min-width:0; max-width:480px; }
+       (support, store, clock, notifications, avatar) off the screen. A fixed
+       gap keeps it from touching UBIF support when space runs out. */
+    header .components-header-searchbox:has(> #ubif-universal-search) { flex:1 1 auto; min-width:0; max-width:480px; margin-inline-end:16px; }
     #ubif-universal-search { position:relative; width:100%; min-width:0; max-width:480px; font:inherit; color:var(--aui-on-surface,#222); }
-    #ubif-universal-search[data-ubif-slot=header] { flex:0 1 420px; width:auto; min-width:200px; max-width:520px; }
+    #ubif-universal-search[data-ubif-slot=header] { flex:0 1 420px; width:auto; min-width:200px; max-width:520px; margin-inline-end:16px; }
     #ubif-universal-search input { box-sizing:border-box; width:100%; min-height:48px; border:1px solid var(--aui-outline,#bbb); border-radius:var(--aui-border-radius-100,8px); padding:12px; font:inherit; color:inherit; background:var(--aui-elevated-level-01,#fff); }
     #ubif-universal-search input:focus { outline:2px solid var(--aui-primary,#8224ce); outline-offset:2px; }
     /* The browser's own clear button would sit beside ours, so only ours shows,

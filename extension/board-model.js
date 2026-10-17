@@ -103,7 +103,10 @@
         const json = await request(`note?workorderId=${id}&offset=${records.length}&limit=50`, 'GET', undefined, signal);
         if (!Array.isArray(json?.notes) || !Number.isFinite(json.total)) throw new Error('Unexpected Portal notes response.');
         for (const note of json.notes) {
-          if (Number(note.workorderId) !== id || !note.noteId || seen.has(note.noteId)) throw new Error('Portal returned unexpected notes. Open the order to review them.');
+          // Portal includes notes kept on the order's arrival or customer, which
+          // carry no workorderId. A note naming a different order still fails closed.
+          const linked = note.workorderId === null || note.workorderId === undefined;
+          if ((!linked && Number(note.workorderId) !== id) || !note.noteId || seen.has(note.noteId)) throw new Error('Portal returned unexpected notes. Open the order to review them.');
           records.push(note); seen.add(note.noteId);
         }
         if (records.length >= json.total) return records;

@@ -75,6 +75,23 @@
     return /^\/repair\/workorder\/\d+(?:\/|$)/.test(window.location.pathname) ||
       /^\/boh\/inventory(?:\/|$)/.test(window.location.pathname);
   }
+  /* The portal reads scans itself, from a window keypress detector that fires
+     its scanDetected event; no focus is needed. Its "Scan or enter item label"
+     field (check-in Add Arrival and Schedule Appointment, work-order Scan
+     label and Work in progress, check-out) and its IMEI and refund flows all
+     wait for that event. Cancelling Enter here suppresses the keypress, so
+     while one of them is on screen the keystrokes are left alone. Panels stay
+     mounted when closed; only an open one (aria-hidden="false") counts. */
+  const panelSelector = '[role="status"][aria-live="assertive"][aria-hidden="false"], [data-aui="modal"][aria-modal="true"]';
+  const scanFieldSelector = '[data-icon-name="shopping/barcode-1.svg"], .search-scan-label, [data-testid="check-out-refund-container"]';
+  const visible = node => Boolean(node && node.getClientRects?.().length);
+  function scanSurface() {
+    for (const panel of document.querySelectorAll(panelSelector)) {
+      if (panel.querySelector(`${scanFieldSelector}, input:not([type="hidden"])`)) return 'panel';
+    }
+    for (const field of document.querySelectorAll(scanFieldSelector)) if (visible(field)) return 'page';
+    return null;
+  }
   /* Values that are neither work orders nor portal links are sent to the
      universal search field: item barcodes, IMEIs, serial numbers, phone
      numbers, claim references and names. Anything that reads like prose or an
@@ -122,8 +139,21 @@
     if (buffer && (now - last > MAX_GAP || event.target !== target || route !== window.location.pathname)) reset();
     if (event.key === 'Enter' || event.key === 'Tab') {
       const rapid = buffer.length >= (isReceiving ? 4 : 5) && (now - started) / buffer.length <= MAX_AVERAGE;
-      const nativeField = !isReceiving && portalOwnsTarget();
       const inSearch = !!target?.closest?.('#ubif-universal-search');
+      // An open panel owns every scan. A scan field on the page itself owns
+      // everything except work-order numbers and portal links.
+      const surface = !isReceiving && !isCounting && !inSearch ? scanSurface() : null;
+      const nativeField = !isReceiving && (portalOwnsTarget() || surface === 'panel' || (surface === 'page' && !destination(buffer)));
+      if (nativeField && surface && rapid && event.key === 'Tab') {
+        // The portal's detector only ends a scan on Enter; finish a Tab scan for it.
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const scan = buffer;
+        restore();
+        reset();
+        window.dispatchEvent(new CustomEvent('scanDetected', { detail: { scan } }));
+        return;
+      }
       const href = !nativeField && !isReceiving && !(inSearch && !looksLikeUrl(buffer)) && rapid && config.scannerOpenLinks !== false ? destination(buffer) : null;
       const query = !nativeField && !isReceiving && rapid && !href && config.scannerSearch !== false ? searchTarget(buffer) : null;
       const searched = Boolean(query) && toSearch(query);

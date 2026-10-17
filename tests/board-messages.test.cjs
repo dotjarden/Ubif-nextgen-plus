@@ -53,3 +53,12 @@ test('stale or closed editor requests cannot open messages', async t => {
   b.dialog.open = true; b.launch(); b.dialog.dataset.messageRequest = 'different'; await tick();
   assert.equal(b.dispatched.length, 0);
 });
+test('closing from the editor closes only the conversation it opened', async t => {
+  const close = (b, workorderId) => b.w.dispatchEvent(new b.w.MessageEvent('message', { source: b.w, data: { source: 'ubif-plus', type: 'board-chat-close', workorderId } }));
+  const other = boot(t, { existing: { customerId: 82, workorderId: '302' } });
+  close(other, '301');
+  assert.equal(other.dispatched.length, 0, 'another order’s conversation stays open');
+  const own = boot(t, { existing: { customerId: 81, workorderId: '301' } });
+  close(own, '301');
+  assert.deepEqual(own.dispatched, [{ type: 'open', payload: false }]);
+});

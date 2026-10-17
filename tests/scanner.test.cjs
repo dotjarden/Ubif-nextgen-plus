@@ -396,3 +396,75 @@ test('count scan cancels pending universal search if its input still had focus',
   b.scan('I-1234567890', { target: input });
   assert.equal(restored, 'previous query');
 });
+/* The portal's own check-in side panel (Add Arrival / Schedule Appointment)
+   and its "Scan or enter item label" field read scans from the portal's
+   keypress detector, which a cancelled Enter would never reach. */
+function scanPanel(b, { open = true, field = true } = {}) {
+  const panel = b.w.document.createElement('div');
+  panel.setAttribute('role', 'status');
+  panel.setAttribute('aria-live', 'assertive');
+  panel.setAttribute('aria-hidden', String(!open));
+  panel.innerHTML = `<h2>Add Arrival</h2>${field ? '<span data-icon-name="shopping/barcode-1.svg"></span>' : ''}<form><input type="text"></form>`;
+  b.w.document.body.append(panel);
+  return panel;
+}
+test('an open check-in panel keeps item scans, typed or not, away from universal search', t => {
+  const b = boot(t), queries = withSearch(b);
+  b.w.history.pushState({}, '', '/check-in/arrivals/123');
+  const panel = scanPanel(b);
+  const input = panel.querySelector('input');
+  for (const target of [b.w.document.body, input]) {
+    const result = b.scan('638911-1234567890', { target });
+    assert.equal(result.defaultPrevented, false, 'Enter reaches the portal keypress detector');
+  }
+  assert.equal(input.value, '638911-1234567890', 'a scan into the label field stays there');
+  assert.equal(b.scan('30787644').defaultPrevented, false, 'a numeric SKU inside the panel never opens a work order');
+  assert.deepEqual(queries, []);
+  assert.deepEqual(b.navigations, []);
+});
+test('a Tab-terminated scan in a portal panel is delivered as one native scan', t => {
+  const b = boot(t), queries = withSearch(b), scans = [];
+  b.w.addEventListener('scanDetected', event => scans.push(event.detail.scan));
+  scanPanel(b);
+  assert.equal(b.scan('638911-1234567890', { suffix: 'Tab' }).defaultPrevented, true, 'focus stays put');
+  assert.deepEqual(scans, ['638911-1234567890']);
+  assert.deepEqual(queries, []);
+});
+test('closed panels and panels without fields leave scanning unchanged', t => {
+  const b = boot(t), queries = withSearch(b);
+  scanPanel(b, { open: false });
+  assert.equal(b.scan('638911-1234567890').defaultPrevented, true);
+  assert.deepEqual(queries, ['638911-1234567890'], 'a closed panel is still mounted but owns nothing');
+  const chat = scanPanel(b, { field: false });
+  chat.querySelector('form').remove();
+  b.scan('SN-8842-A');
+  assert.deepEqual(queries, ['638911-1234567890', 'SN-8842-A']);
+});
+test('a visible scan field on the page keeps item scans but work orders still open', t => {
+  const b = boot(t), queries = withSearch(b);
+  b.w.history.pushState({}, '', '/repair/workorder/30787644');
+  const accordion = b.w.document.createElement('div');
+  accordion.dataset.testid = 'work-in-progress-accordion';
+  accordion.innerHTML = '<div class="scan-label"><span data-icon-name="shopping/barcode-1.svg"></span><input type="text"></div>';
+  b.w.document.body.append(accordion);
+  const icon = accordion.querySelector('[data-icon-name]');
+  icon.getClientRects = () => [{ width: 24, height: 24 }];
+  assert.equal(b.scan('638911-1234567890').defaultPrevented, false);
+  assert.deepEqual(queries, []);
+  assert.equal(b.scan('30787645').defaultPrevented, true);
+  assert.deepEqual(b.navigations, ['/repair/workorder/30787645']);
+  // A hidden field (a collapsed accordion) does not count.
+  icon.getClientRects = () => [];
+  b.scan('SN-8842-A');
+  assert.deepEqual(queries, ['SN-8842-A']);
+});
+test('scans typed into universal search stay in search even with a panel open', t => {
+  const b = boot(t), queries = withSearch(b);
+  scanPanel(b);
+  const host = b.w.document.createElement('div');
+  host.id = 'ubif-universal-search';
+  const field = b.w.document.createElement('input');
+  host.append(field); b.w.document.body.append(host);
+  b.scan('638911-1234567890', { target: field });
+  assert.deepEqual(queries, ['638911-1234567890']);
+});

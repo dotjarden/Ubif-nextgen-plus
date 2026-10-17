@@ -80,6 +80,7 @@
       font:600 15px/1 system-ui,-apple-system,sans-serif;padding:3px 6px;border-radius:4px;
       cursor:pointer}
     #ubif-plus-chat-resume{position:fixed;bottom:16px;right:16px;z-index:2147483647;padding:12px 16px;border:0;border-radius:8px;background:#8224ce;color:#fff;cursor:pointer;font:600 14px/1.4 system-ui;box-shadow:0 2px 12px #0003}
+    html[data-ubif-chat-panel] #ubif-plus-chat-resume{right:calc(32rem + 16px)}
     .ubif-plus-chat-status{padding:8px;background:#fff;color:#333;font:13px/1.4 system-ui}
     .ubif-plus-chat-pop{border:0;background:transparent;color:inherit;cursor:pointer;padding:3px 6px;font:600 15px/1 system-ui}
     .ubif-plus-chat-min:hover{background:rgba(0,0,0,.1)}
@@ -585,6 +586,12 @@
   // safety net, in case the transcript DOM is ever out of reach.
   addEventListener('message', event => {
     const data = event && event.data;
+    // Portal's customer conversation is a 32rem panel at the right edge; keep
+    // Resume support chat beside it instead of over its message box.
+    if (event.source === window && data && data.source === 'ubif-plus' && data.type === 'message-context') {
+      document.documentElement.toggleAttribute('data-ubif-chat-panel', !!data.open);
+      return;
+    }
     if (enabled && handoff && handoff.session === session() && event.origin === location.origin && event.source === handoff.target &&
         data && data.type === READY && data.id === handoff.id) {
       handoff = null;

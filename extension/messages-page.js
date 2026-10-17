@@ -139,6 +139,19 @@
       reply('');
     } catch (error) { if (valid()) reply(error.message || 'Could not open Portal messaging.'); }
   }
+  /* Closes the conversation the Update Today editor opened, and only that one:
+     a conversation for another order or customer is left alone. */
+  function closeBoardChat(request) {
+    try {
+      const id = String(request.workorderId || '');
+      const system = globalThis.System;
+      const module = system?.get(system.resolve('@ubif/util-store'));
+      if (!/^\d+$/.test(id) || !module?.store?.dispatch || !module.setChatPanelOpen) return;
+      const state = module.store.getState();
+      if (!module.selectChatPanelOpen(state) || String(module.selectChatPanelData(state)?.workorderId) !== id) return;
+      module.store.dispatch(module.setChatPanelOpen(false));
+    } catch { /* Portal keeps its own close button. */ }
+  }
   function connect() {
     try {
       const system = globalThis.System;
@@ -151,6 +164,7 @@
   document.addEventListener('click', capture, true);
   addEventListener('message', event => {
     if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'board-chat-open') openBoardChat(event.data);
+    if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'board-chat-close') closeBoardChat(event.data);
     if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'message-context-request') { previous = ''; employeePrevious = null; connect(); }
   });
   setInterval(connect, 500);

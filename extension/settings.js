@@ -45,7 +45,8 @@
     boardShowEmpty: true,
     boardRefreshSec: 60,
     boardIncludeTomorrow: false,
-    hideHomeCalendar: false
+    hideHomeCalendar: false,
+    navEnhance: true
   });
   const range = { searchDebounceMs: [100, 2000], searchMinChars: [3, 10], boardRefreshSec: [15, 600] };
   let current = { ...defaults }, hooked = false, revision = 0, writes = Promise.resolve();

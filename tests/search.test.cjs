@@ -131,7 +131,7 @@ test('the field has one state — open in the header — and focus changes nothi
   const input = root.querySelector('input');
   const css = [...w.document.querySelectorAll('style')].map(node => node.textContent).join('');
   assert.match(css, /#ubif-universal-search \{ position:relative; width:100%; min-width:0; max-width:480px;/, 'one width, no collapsed variant');
-  assert.match(css, /components-header-searchbox:has\(> #ubif-universal-search\) \{ flex:1 1 auto; min-width:0; max-width:480px; \}/, 'the field takes the header\'s spare space, up to the width it opens at');
+  assert.match(css, /components-header-searchbox:has\(> #ubif-universal-search\) \{ flex:1 1 auto; min-width:0; max-width:480px; margin-inline-end:16px; \}/, 'the field takes the header\'s spare space, up to the width it opens at, and never touches UBIF support');
   assert.doesNotMatch(css, /data-ubif-expanded/, 'no collapsed/expanded duality');
   assert.equal(input.placeholder, 'Search everything…');
   input.dispatchEvent(new w.FocusEvent('focus'));

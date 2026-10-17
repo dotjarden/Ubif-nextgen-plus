@@ -4,54 +4,47 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-10-16
+
 ### Added
 
-- Messages action in the Update Today editor opens Portal’s customer conversation beside the editor, preserving unsaved notes and scheduling fields. Portal owns history, templates, contact preferences and sending.
-- Oldest/newest sort buttons for Created and Next update on the WO table, with per-tab saved sort direction. Extension sorting applies to loaded rows; native header sorting remains available.
-- Optional Line items / SKUs work-order column. Visible rows load their cart details with bounded concurrency; column visibility, position and width use the existing saved layouts.
-
-### Fixed
-
-- Consecutive scans into universal search now retain and select the newest query instead of restoring and re-searching the first barcode. Numeric scans in the focused search field remain searches.
-- Inventory routes keep scans in their native workflow. Count editors receive one native scan event, including Tab-terminated scans, without opening universal search or work orders.
-- Include tomorrow now saves through shared settings. Data columns refresh when updated feed/cart data arrives.
-
-
-- Employee first-name template detail, RT iPhone and RT Android appointment confirmations, and a name button replacing the header profile icon while retaining its account menu. Settings include a first-name override.
-- Settings for message templates, quick template shortcuts, the employee label, check-in Extra Details, the battery diagnosis shortcut, and inline search result tags.
-
-- Extra Details above the native Additional Details section on standard and Samsung diagnosis forms: Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est. Entries join existing Notes / Additional Details and save through the normal check-in workflow. ETA accepts a time, date or “unsure.” A “Battery not working” shortcut below the diagnosis heading selects “Can’t test” for every native category and fills required test-reason notes, opening collapsed categories when needed. The button leaves Extra Details untouched and no longer shows the Quick diagnosis label or explanatory paragraph. Autofilled notes use plain “Extra Details:” text without extension branding. All eight Extra Details fields are required before continuing diagnosis; the battery shortcut discovers all sibling categories even when an inner render exposes only Hardware. Selection confirmation resolves React’s current committed tree to avoid stopping after Hardware on a stale render.
-
-- Add inline Print buyback buttons beside item and sold serial search results, a sold-serial chooser, and a Universal search setting to show or hide the buttons. Printing uses the linked work order’s native action.
-
-- Customer message templates inside the Messages sidebar: create, edit and delete locally saved templates, insert customer/device/work order/appointment fields with optional fallback text, and personalize a real-data preview before inserting into the Portal composer.
+- **Update Today messages**: the editor's Messages button opens Portal's customer conversation beside the editor, keeping unsaved notes and scheduling fields. It toggles to Hide messages, and closing the editor closes the conversation it opened. Portal owns history, templates, contact preferences and sending.
+- **Customer message templates** in the shared Arrivals/Workorders customer chat: a searchable library with two quick shortcuts, a visual editor that inserts readable detail chips (first name, device, appointment, work order and more) at the cursor, alternate text for missing details, customer previews, copy and undo-delete. Workorder templates resolve the linked arrival appointment and missing contact details automatically; Arrivals reads the selected customer card.
+- **Check-in Extra Details**: Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est above the native Additional Details on standard and Samsung diagnosis forms, saved into the order's notes through the normal check-in. All eight are required before continuing. A **Battery not working** shortcut selects "Can't test" in every native category and fills required test-reason notes.
+- **Sidebar improvements** (Settings → Home, on by default): 40 px rows with the More chevron at the row edge; Support Ticket, Enhancement Idea and then More (last, its menu opening below) grouped at the bottom above the collapse arrow; collapsed icons named in tooltips and to screen readers; the whole More row opens its menu (expanding a collapsed sidebar first) instead of opening Dashboard; Support Ticket and Enhancement Idea styled like the rest of the sidebar with icons; the last collapse choice kept after resizing a wide window.
+- **Workorders table**: oldest/newest sort buttons for Created and Next update with a saved direction per tab, and an optional Line items / SKUs column loaded with bounded concurrency.
+- **Arrivals pagination**: 10/25/50/100 rows per page, matching Workorders, with a saved preference and controls in Settings → Tables.
+- **Buyback printing in search**: Print buyback beside item and sold-serial results, with a sold-serial chooser and a Universal search setting.
+- **Employee name in the header**: your first name replaces the profile icon and opens the same account menu, with an optional first-name override in settings. RT iPhone and RT Android appointment confirmations join the templates.
+- New settings for message templates, quick shortcuts, the employee label, check-in Extra Details, the battery shortcut, inline search result tags and the sidebar improvements.
+- A Windows daily ZIP update helper.
 
 ### Improved
 
-- Universal search shows native-style program, source, status, and claim tags inline within each result. Update Today matches the native tab label typography and 4px on-surface selection indicator.
-
-- Message templates now use compact shortcuts and a searchable library. A visual editor inserts readable detail chips at the typing cursor, provides customer previews and simple alternate-text settings, and supports copying templates and undoing deletion. Missing required details prompt for one-time values, and existing drafts offer explicit Add or Replace actions.
-
-- Arrivals now offers the same 10/25/50/100 rows-per-page choices as Workorders, with native table pagination, a saved preference, and a toggle and page-size dropdown in addon settings → Tables.
-
-- New icon artwork: a dark rounded tile with a white **U** and a sky-blue plus, sourced from `icon.svg` and rendered into every toolbar, notification, and store-facing asset. The previous raster art is kept as `old-icon.jpeg`.
+- **Update Today board**: cards open from anywhere (the WO link still opens Portal) with a compact Update button and overdue times in red; statuses with nothing due collapse into a strip of drop targets above the lanes so orders are on screen first.
+- **Update Today editor**: the portal font and pill buttons; status and next update in the header; progress on the button that started it (spinner, then ✓) with the message bar kept for problems; a future time suggested instead of a past one; links in notes are clickable; focus starts on the title; ⌘/Ctrl+Enter adds a note or saves a status change; a full-height status dropdown.
+- Universal search shows native-style program, source, status and claim tags inline in each result.
+- Template shortcuts match Portal's quick-reply buttons, and Update Today's tab matches the native tab typography and selection indicator.
+- New icon artwork: a dark rounded tile with a white **U** and a sky-blue plus, rendered from `icon.svg`.
 
 ### Fixed
 
-- Employee names attach to the Portal’s actual `.components-header-opts-avatar` control, use native header typography and vertical alignment, and follow signed-in user changes.
-- Keep message templates anchored directly above the composer after messages and conversation rerenders. Reordered table cells now apply side borders and rounded corners at the visible table edges.
+- **Scanning into Portal's own scan fields**: the check-in Add Arrival / Schedule Appointment panel, work-order Scan label and Work in progress, Repair Estimate and check-out now receive scans instead of universal search. An open panel never opens a work order from a numeric SKU, and Tab-terminated scans there arrive as one native scan.
+- SKU and part-number scans into Portal's search bar, dialog inputs and work-order part inputs are no longer blanked or redirected.
+- Consecutive scans into universal search keep and select the newest query. Inventory routes keep scans in their native workflow; count editors receive one native scan, including Tab-terminated scans.
+- Update Today notes load for orders that also have notes on their arrival or customer (labelled Arrival / Customer); a note naming a different order still blocks the list.
+- Resume support chat moves beside Portal's customer conversation instead of covering its message box.
+- The header search field keeps a gap before UBIF support instead of touching it.
+- Include tomorrow saves through shared settings, and data columns refresh when new feed or cart data arrives.
+- Employee names attach to Portal's actual avatar control with native typography and follow signed-in user changes.
+- Message templates stay anchored above the composer across rerenders, keep the cursor when detail buttons are clicked, and recover appointment details when chat opened before the extension loaded.
+- Reordered table cells keep side borders and rounded corners at the visible table edges.
+- The Windows updater runs from the installation's scripts folder.
 
-- Message templates recover appointment/device details from the matching mounted arrival when chat is already open or its launch click was missed. Late arrival data completes the original template selection and removes the unnecessary missing-appointment prompt.
+### Upgrade notes
 
-- Saved templates automatically resolve the selected workorder's linked arrival appointment and missing customer contact details. Clicking while details load completes insertion after loading instead of asking for information that is already on the record. Arrivals also reads the original arrival when its summary omits appointment time.
-
-- Template detail insertion preserves the message cursor after clicking another field or detail button, including browsers that expose selections at the shadow host.
-
-- Message templates now attach to the actual shared customer ChatPanel used by Arrivals and Workorders, including panels titled with the customer's name. Arrivals templates read the selected customer card's device and appointment information; Workorders templates follow the chat's selected order.
-
-- Scanning a product SKU or part number into the portal's own search bar, or into the "add part" input on a work order diagnostic stage, no longer blanks the field. The scanner now detects portal-owned inputs — any input inside an open dialog and inputs on work order detail pages — and lets the portal handle the scan natively instead of redirecting it to universal search.
-
-Sources: [`405d926`](https://github.com/dotjarden/Ubif-nextgen-plus/commit/405d926).
+- Existing settings, templates and column layouts are kept. New features are on by default and can be switched off in settings.
+- Reload the extension, then refresh portal tabs. Physical-scanner timing in the check-in panel and authenticated Update Today writes should be confirmed in the live portal.
 
 ## [0.8.3] — 2026-10-09
 
