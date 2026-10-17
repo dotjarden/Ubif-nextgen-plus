@@ -2,13 +2,15 @@
   <img src="icon.svg" width="88" height="88" alt="UBIF NextGen Plus icon">
   <h1>UBIF NextGen Plus</h1>
   <p><strong>Less clicking. Faster lookups. A portal that works your way.</strong></p>
-  <p>Universal search, barcode scanning, custom tables, a daily update board, and a movable support chat for the UBIF portal.</p>
+  <p>Universal search, barcode scanning, custom tables, a daily update board, customer message templates, a cleaner sidebar, and a movable support chat for the UBIF portal.</p>
   <p><a href="#install">Install</a> · <a href="#update">Update</a> · <a href="CHANGELOG.md">Changelog</a> · <a href="https://github.com/dotjarden/Ubif-nextgen-plus/issues">Request a feature</a> · <a href="https://www.buymeacoffee.com/jarden">Buy me a coffee</a></p>
 </div>
 
 ---
 
-**Latest release: [0.8.3](https://github.com/dotjarden/Ubif-nextgen-plus/releases/tag/v0.8.3)** · [What changed](CHANGELOG.md#083--2026-10-09)
+**Latest release: [0.9.0](https://github.com/dotjarden/Ubif-nextgen-plus/releases/tag/v0.9.0)** · [What changed](CHANGELOG.md#090--2026-10-16)
+
+**New in 0.9.0:** scans reach Portal's own scan fields (such as the check-in Add Arrival panel) instead of universal search; a tidier sidebar with labelled collapsed icons and a More row that opens its menu; a reworked Update Today board and editor with Portal messages beside it; customer message templates; check-in Extra Details and a Battery not working shortcut. See the [changelog](CHANGELOG.md#090--2026-10-16) for everything.
 
 Built for Chrome and `portal.ubreakifix.net`. Runs inside your existing portal session, with no additional account or subscription. This is an independent extension, not an official UBIF or Asurion product.
 
@@ -18,12 +20,14 @@ Built for Chrome and `portal.ubreakifix.net`. Runs inside your existing portal s
 | --- | --- |
 | **Universal search** | Search customers, work orders, items, claims, and inventory serials from the portal header. Press **Cmd/Ctrl + K** to start. |
 | **Buyback labels** | Print inline with an item or sold serial search result; choose a sold serial when there are several. |
-| **Barcode scanning** | Open work orders, follow portal QR links, send other scans to search, and scan repeatedly during purchase-order receiving. |
-| **Extra Details** | Add Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est to diagnosis. Saved with the order’s native Notes / Additional Details. |
-| **Update Today** | See active work orders due today or earlier, read/add notes, schedule the next update, and prepare supported status changes. |
+| **Barcode scanning** | Open work orders, follow portal QR links, send other scans to search, and scan repeatedly during purchase-order receiving. Portal's own scan fields—the check-in Add Arrival panel, work-order Scan label, Repair Estimate and check-out—keep their scans. |
+| **Extra Details** | Add Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est to diagnosis. Saved with the order’s native Notes / Additional Details. A **Battery not working** shortcut fills every native “Can’t test” option. |
+| **Update Today** | See active work orders due today or earlier; click a card to schedule the next update, change a supported status, or read and add notes (⌘/Ctrl+Enter); open the customer's Portal messages beside the editor. Statuses with nothing due become drop targets above the board. |
+| **Message templates** | Reusable customer messages in the Arrivals and Workorders chat, with detail chips (first name, device, appointment, work order) filled from the selected customer. |
+| **Sidebar** | Labelled icons when collapsed, a More row that opens its menu, Support Ticket and Enhancement Idea styled to match, and your collapse choice kept on resize. |
 | **Custom columns** | Show, hide, reorder, and resize Workorders and Arrivals columns. Save a separate layout for each view. |
 | **Support chat** | Move and minimize chat while keeping the portal usable; recover supported sessions and receive configurable unread alerts. |
-| **Your preferences** | 33 controls across six feature categories, searchable settings, per-category resets, and a full-page settings view. |
+| **Your preferences** | 41 controls across eight feature categories, searchable settings, per-category resets, and a full-page settings view. |
 
 Want the details? Read the [feature guide](docs/FEATURES.md), including keyboard controls, scanning rules, column behavior, and support-session limits.
 
@@ -85,8 +89,10 @@ Open the toolbar popup and choose a category—or use **Find a setting**. **Open
 
 | Category | Available preferences |
 | --- | --- |
-| Home | Hide the Home calendar. |
-| Universal search | Enable search; choose result categories, shortcut, typing delay, minimum characters, opening results in new tabs, and inline buyback buttons. |
+| Home | Hide the Home calendar; turn the sidebar improvements on or off. |
+| Messages & employee | Message templates and quick shortcuts; show your first name in the header, with an optional override. |
+| Check-in | Extra Details fields and the Battery not working shortcut. |
+| Universal search | Enable search; choose result categories, shortcut, typing delay, minimum characters, inline result tags, opening results in new tabs, and inline buyback buttons. |
 | Update Today | Enable the board; include tomorrow; configure periodic refresh, status dragging, and empty columns. |
 | Barcode scanning | Enable scanning; choose navigation, search forwarding, receiving, OEM field focus, and automatic confirmation. |
 | Tables | Customize Workorders and Arrivals columns independently; enable Arrivals pagination and choose 10/25/50/100 rows per page. |
@@ -98,7 +104,7 @@ A settings page served from `localhost` is a visual preview, not your installed 
 
 ## Privacy and permissions
 
-- **Storage:** settings, column layouts, and support-window position stay in extension-local storage.
+- **Storage:** settings, column layouts, message templates, and support-window position stay in extension-local storage; the sidebar's collapse choice is kept in the portal tab's local storage. Customer details used in template previews are never saved.
 - **Notifications:** optional desktop alerts for hidden support messages. Disable previews if you prefer a generic notification.
 - **Portal access:** content scripts run on `https://portal.ubreakifix.net/*` and use your current session. Search and table data use portal APIs; board saves perform actions you request.
 - **Support recovery:** drafts and recovery state stay in the portal tab's session storage. Ended or expired support sessions cannot be revived.
@@ -113,6 +119,8 @@ For storage details, API behavior, and recovery boundaries, see [Scope and priva
 | New features do not appear | Reload the extension, then refresh the portal tab. Confirm Chrome loaded the folder you updated. |
 | A setting is grayed out | Enable its parent feature. Scan-to-search also requires universal search. |
 | Scans act like typing | Enable scanning; use a keyboard-mode scanner ending in Enter or Tab; keep the portal tab active. Embedded frames are not supported. |
+| A scan does not open search | While a Portal scan field or side panel is open (for example check-in Add Arrival), scans go to that field by design. Close the panel, or click into universal search first. |
+| Sidebar looks unchanged | Turn on **Settings → Home → Sidebar improvements**, then refresh the portal tab. |
 | Git update refuses to run | Commit or stash local changes. A detached checkout or branch without an upstream needs to be fixed before updating. The helper leaves your files alone. |
 | Search returns no results | Check enabled categories, query length, and portal login. Inventory serial search is not a general IMEI lookup API. |
 | Support does not reconnect | Confirm the portal session and support conversation are still active. File selections and uploads in progress are not restored. |
