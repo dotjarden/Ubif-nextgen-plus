@@ -6,9 +6,9 @@ http.createServer((req,res)=>{
   // Any script in extension/ or demo/ can be hot-loaded into a live portal tab.
   const isScript = /^\/(extension(\/vendor)?|demo)\/[a-z0-9][a-z0-9.-]*\.js$/.test(url.pathname);
   // The settings page previews with in-memory storage (no extension APIs).
-  const isSettings = url.pathname === '/extension/popup.html';
+  const isSettings = /^\/extension\/(popup|options)\.html$/.test(url.pathname) || /^\/extension\/[a-z-]+\.css$/.test(url.pathname);
   const file = isScript || isSettings ? path.join(__dirname,'..',url.pathname) : path.join(__dirname,url.pathname === '/messages' ? 'messages.html' : /^\/repair\/workorder\/\d+$/.test(url.pathname) ? 'workorder.html' : 'index.html');
-  res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':'text/html');
+  res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');
   // The preview is also used to hot-load the scripts into a live portal tab.
   res.setHeader('Access-Control-Allow-Origin','*');
   // Always serve the current files while iterating.

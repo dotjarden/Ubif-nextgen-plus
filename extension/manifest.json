@@ -85,7 +85,7 @@
   },
   "action": {
     "default_title": "UBIF NextGen Plus settings",
-    "default_popup": "popup.html",
+    "default_popup": "options.html",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",
@@ -94,7 +94,7 @@
     }
   },
   "options_ui": {
-    "page": "popup.html",
+    "page": "options.html",
     "open_in_tab": true
   }
 }

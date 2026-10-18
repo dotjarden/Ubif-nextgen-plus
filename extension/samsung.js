@@ -58,6 +58,7 @@
     .status{flex:1;margin:0;font-size:13px;color:var(--muted)}
     .status[data-error=true]{color:var(--aui-status-error,#b42318)}
     footer button{min-height:40px;padding:9px 18px;border:1px solid var(--aui-outline,#c8c2cd);border-radius:999px;background:var(--aui-elevated-level-01,#fff);font-size:14px;font-weight:500;cursor:pointer}
+    footer .link{border:0;background:none;padding:6px 4px;min-height:0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-weight:400}
     footer .primary{background:var(--aui-primary,#8224ce);border-color:transparent;color:var(--aui-on-primary,#fff)}
     footer button:disabled{opacity:.5;cursor:default}
     @media(max-width:560px){.fields{grid-template-columns:1fr}header,.forms,.fields,.auto,footer{padding-left:18px;padding-right:18px}.note{margin-left:18px;margin-right:18px}}
@@ -101,7 +102,9 @@
   const status = el('p', '', { class: 'status', role: 'status', 'aria-live': 'polite' });
   const cancel = el('button', 'Cancel', { type: 'button' });
   const open = el('button', 'Open Sprinklr form', { type: 'button', class: 'primary' });
-  footer.append(status, cancel, open);
+  const settingsLink = el('button', 'Settings', { type: 'button', class: 'link', title: 'Samsung forms settings' });
+  settingsLink.addEventListener('click', () => { try { chrome.runtime.sendMessage({ type: 'ubif-plus-open-settings', hash: '#samsung' }).catch?.(() => {}); } catch {} });
+  footer.append(settingsLink, status, cancel, open);
   dialog.append(header, forms, fields, note, autoLabel, footer);
   shadow.append(css, launch, dialog);
 

@@ -52,6 +52,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.tabs.onRemoved.addListener(tabId => { session.remove(jobKey(tabId)).catch(() => {}); });
 
+/* Portal features link into the settings page at a card or tab, such as
+   #samsung or #templates/notes. Content scripts cannot open extension pages
+   themselves. */
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== 'ubif-plus-open-settings') return;
+  const hash = typeof message.hash === 'string' && /^#[\w\-/]{0,60}$/.test(message.hash) ? message.hash : '';
+  if (origin(sender.url || sender.tab?.url || '') !== PORTAL_ORIGIN) { sendResponse({ ok: false }); return; }
+  chrome.tabs.create({ url: chrome.runtime.getURL(`options.html${hash}`) }).then(() => sendResponse({ ok: true }), () => sendResponse({ ok: false }));
+  return true;
+});
+
 chrome.runtime.onMessage.addListener(message => {
   if (!message || typeof message.type !== 'string') return;
   if (message.type === 'ubif-plus-chat-message') {

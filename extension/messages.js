@@ -135,6 +135,7 @@
         return top > 0 ? Math.max(100, Math.min(420, top - header - 64 - (view === 'editor' ? 56 : 0))) : 360;
       },
       getContext: () => ({ key: currentId, values: { ...context, 'employee.firstName': globalThis.UBIFPlusEmployee?.firstName || config.employeeFirstName || '' }, loading: contextState === 'loading' }),
+      openSettings: () => { try { chrome.runtime.sendMessage({ type: 'ubif-plus-open-settings', hash: '#templates/messages' }).catch?.(() => {}); } catch {} },
       getDraft: () => { const input = composer(panel); return input?.tagName === 'TEXTAREA' ? input.value : input?.textContent || ''; },
       save: async next => {
         if (!area) throw new Error('Template storage unavailable');

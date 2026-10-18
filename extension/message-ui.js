@@ -177,7 +177,9 @@
           if (!list.childNodes.length) list.append(el('p', api.getTemplates().length ? 'No matching templates.' : 'Save a message you use often, then reuse it for any customer.', { class: 'hint' }));
         };
         search.oninput = () => { query = search.value; renderList(); }; content.append(search, list); renderList();
-        actions(content, btn('+ New template', () => startEdit(null), 'link'));
+        // In Portal, the settings page has the same library on a full page.
+        if (api.openSettings) actions(content, btn('+ New template', () => startEdit(null), 'link'), btn('Manage in settings', () => api.openSettings(), 'link'));
+        else actions(content, btn('+ New template', () => startEdit(null), 'link'));
         return;
       }
       if (view === 'editor') {

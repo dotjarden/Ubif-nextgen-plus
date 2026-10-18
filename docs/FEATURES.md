@@ -6,7 +6,20 @@ Detailed behavior and limitations for UBIF NextGen Plus.
 
 ## Settings
 
-Click the extension's toolbar icon for settings, then use the category navigation or **Find a setting** to locate a control. **Open in tab** opens the same controls in a browser tab; Chrome's extension **Options** opens that page too. Settings save immediately and apply to open portal tabs. Related controls are disabled when their parent feature is off, and each category has its own reset button. A failed save restores the previous value and displays an error.
+The toolbar icon opens settings in the popup (`options.html`). **Open in tab** opens the same page in a tab at the same place, and so does Chrome's extension **Options**. Everything is grouped into feature cards under General, Finding things, Work orders, Customers and Check-in, plus Templates and About & updates. **What's new** shows once at the top after an update (with Reload) until you dismiss it.
+
+- **Cards:** each card has a main switch with its options listed beneath it (collapsible), and its **Restore defaults** resets only that card.
+- **Disabled options:** greyed-out options name what to turn on.
+- **Number shortcuts:** sliders set colors, and preset buttons fill the common values (search delay Fast/Normal/Relaxed; refresh 30 s/1 min/5 min).
+- **Search:** press **/** to search. Results show where each setting lives, and choosing one opens its group and options and highlights it.
+- **Changed:** filters to settings that differ from their defaults.
+- **Deep links:** `#samsung`, `#templates/notes`, `#templates/notes/checkin` and `#templates/messages` open a card or tab directly. The note template menu, the chat template library and the Samsung dialog use them.
+- **Templates:** the Templates page holds the customer message editor (the chat editor, previewed with an example customer; sending stays in Portal) and note template wording, each note template with its shortcut.
+- **Column layouts and store emails:** the Tables card lists saved column layouts with a per-layout reset. The Samsung forms card lists remembered store emails with Forget.
+- **Backup:** **Export setup** downloads one JSON file with settings, note template wording, shortcuts, message templates, column layouts and store emails. **Import setup** checks each part with the same rules the extension uses (settings are clamped, refused shortcuts dropped, unknown keys ignored) and confirms before replacing.
+- **Reset:** **Reset…** resets only what you tick. Message templates are never reset there.
+
+Settings save immediately and apply to open portal tabs. A failed save restores the previous value and displays an error.
 
 - **Home**: hide the Home calendar to give Quick actions and Today's to-do's more room, and turn the [sidebar improvements](#sidebar-090) on or off.
 - **Appearance**: turn on [dark mode](#dark-mode-unreleased) or its dimmed variant, limit it to when your device uses dark mode, and set brightness and contrast (50–150%), sepia and grayscale (0–100%).

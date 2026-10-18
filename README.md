@@ -31,7 +31,7 @@ Built for Chrome and `portal.ubreakifix.net`. Runs inside your existing portal s
 | **Keyboard shortcuts** | Bind any template, Samsung form or dark mode to a key combination such as ⌥⇧D. |
 | **Custom columns** | Show, hide, reorder, and resize Workorders and Arrivals columns. Save a separate layout for each view. |
 | **Support chat** | Move and minimize chat while keeping the portal usable; recover supported sessions and receive configurable unread alerts. |
-| **Your preferences** | 56 controls across twelve feature categories, a template wording editor, a shortcut recorder, searchable settings, per-category resets, and a full-page settings view. |
+| **Your preferences** | Settings in the toolbar popup: feature cards in five groups, search that jumps to a setting, a Changed filter, one Templates page, a shortcut recorder, and setup export/import. |
 
 Want the details? Read the [feature guide](docs/FEATURES.md), including keyboard controls, scanning rules, column behavior, and support-session limits.
 
@@ -89,24 +89,26 @@ Maintainers can create tested ZIPs and draft GitHub releases using the included 
 
 ## Make it yours
 
-Open the toolbar popup and choose a category—or use **Find a setting**. **Open in tab** opens the same controls in a browser tab.
+Click the toolbar icon to open settings right in the popup. **Open in tab** shows the same page in a browser tab, and so does Chrome's extension **Options**. Every option is grouped into feature cards, each with a main switch and its options listed beneath it. **What's new** appears once at the top after an update.
 
-| Category | Available preferences |
+| Group | Cards |
 | --- | --- |
-| Home | Hide the Home calendar; turn the sidebar improvements on or off. |
-| Appearance | Dark mode or a dimmed mode; follow your device's light or dark setting; brightness, contrast, sepia, and grayscale. |
-| Note templates | Status and lead templates under notes; check-in templates under Additional Details; edit or restore each template's wording. |
-| Messages & employee | Message templates and quick shortcuts; show your first name in the header, with an optional override. |
-| Check-in | Extra Details fields and the Battery not working shortcut. |
-| Universal search | Enable search; choose result categories, shortcut, typing delay, minimum characters, inline result tags, opening results in new tabs, and inline buyback buttons. |
-| Update Today | Enable the board; include tomorrow; configure periodic refresh, status dragging, and empty columns. |
-| Barcode scanning | Enable scanning; choose navigation, search forwarding, receiving, OEM field focus, and automatic confirmation. |
-| Samsung forms | Show the button; automatic submission; repair location type; Galaxy Diagnostic Tool version; your email override. |
-| Tables | Customize Workorders and Arrivals columns independently; enable Arrivals pagination and choose 10/25/50/100 rows per page. |
-| Support chat | Enable enhancements; choose desktop notifications, unread badges, and message previews. |
-| Keyboard shortcuts | Turn shortcuts on or off; record a key combination for any template, Samsung form or dark mode. |
+| General | Appearance (theme, follow your device, brightness, contrast, sepia, grayscale); Home, sidebar and header; Keyboard shortcuts (record keys for any template, Samsung form or dark mode) |
+| Finding things | Universal search (categories, shortcut, delay with Fast/Normal/Relaxed presets, minimum characters, tags, new tabs, buyback buttons); Barcode scanning |
+| Work orders | Update Today (refresh presets, dragging, empty columns); Tables (columns, Arrivals rows per page, saved layouts with reset); Note templates; Samsung forms (auto-submit, location type, GD version, email override, remembered store emails) |
+| Customers | Message templates; Support chat |
+| Check-in | Extra Details and the battery shortcut; Check-in templates |
+| Templates | Every template in one place: customer messages (the same editor as in chat, previewed with an example customer) and note wording, each with its shortcut |
+| About & updates | What's new, updating, **Export/Import setup** (one file with settings, templates, shortcuts, layouts and store emails), and **Reset…** with a choice of what to reset |
 
-Changes save immediately and apply to open portal tabs. Disabled child controls retain their values until the parent feature is enabled again. Category resets preserve unrelated preferences and column layouts. **Updates & help** explains how to update your installation and links to release notes.
+Finding a setting:
+- **Search** (press **/**) lists matching settings with their place, such as "Work orders › Update Today". Choosing one jumps to it and highlights it.
+- **Changed** shows only the settings you've changed from their defaults.
+- A greyed-out option says what to turn on first.
+
+Changes save immediately and apply to open portal tabs. Turning a feature off keeps its options for when you turn it back on. **Restore defaults** on a card leaves everything else alone.
+
+Portal links into settings: **Edit templates in settings** in the note template menu, **Manage in settings** in the chat template library, and **Settings** in the Samsung dialog each open the matching card.
 
 A settings page served from `localhost` is a visual preview, not your installed extension's settings. Use the Chrome toolbar icon for changes that affect the portal.
 

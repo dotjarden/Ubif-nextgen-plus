@@ -9,9 +9,8 @@ const templatesScript = read('note-templates.js');
 const hotkeyModel = read('hotkey-model.js');
 const pickerScript = read('note-picker.js');
 const hotkeysScript = read('hotkeys.js');
-const popupScript = read('popup.js');
-const editorsScript = read('popup-editors.js');
-const popupHtml = read('popup.html');
+const optionsScripts = ['settings.js', 'note-templates.js', 'hotkey-model.js', 'message-model.js', 'message-ui.js', 'whats-new.js', 'settings-ui.js', 'options.js', 'settings-editors.js'].map(read);
+const optionsHtml = read('options.html');
 const manifest = JSON.parse(read('manifest.json'));
 const SETTINGS = 'ubif-plus.settings.v1';
 const TEMPLATES = 'ubif-plus.note-templates.v1';
@@ -232,12 +231,13 @@ test('a template shortcut with no notes field says what to do', async t => {
 });
 
 test('settings edit template wording and record shortcuts by pressing them', async t => {
-  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html', runScripts: 'outside-only' });
+  const dom = new JSDOM(optionsHtml, { url: 'chrome-extension://abcdef/options.html#templates/notes', runScripts: 'outside-only' });
   t.after(() => dom.window.close());
   const w = dom.window, doc = w.document;
   const data = storage(w, { [HOTKEYS]: { 'samsung.gd': 'alt+g' } });
-  for (const script of [settingsScript, templatesScript, hotkeyModel, popupScript, editorsScript]) w.eval(script);
+  for (const script of optionsScripts) w.eval(script);
   await tick(w);
+  assert.equal(doc.getElementById('templates-notes').hidden, false, 'deep link opens the Notes tab');
 
   const editor = doc.getElementById('template-editor');
   assert.equal(editor.querySelectorAll('details').length, 8, 'status group first');
@@ -248,9 +248,16 @@ test('settings edit template wording and record shortcuts by pressing them', asy
   area.dispatchEvent(new w.Event('input'));
   await tick(w, 500);
   assert.equal(data[TEMPLATES].overrides.oop, 'OOP notes:\nCustom');
-  editor.querySelector('details[data-id="oop"] .tools button').click();
+  editor.querySelector('details[data-id="oop"] .tools .grow').click();
   await tick(w);
   assert.equal('oop' in data[TEMPLATES].overrides, false, 'restored');
+  // Each template offers its shortcut; it opens the recorder already listening.
+  editor.querySelector('[data-group="status"]').click();
+  const set = [...editor.querySelectorAll('details[data-id="awaitingDiag"] .tools button')].find(b => /Set shortcut/.test(b.textContent));
+  set.click();
+  assert.equal(doc.getElementById('group-general').hidden, false, 'jumps to the shortcuts card');
+  assert.equal(doc.querySelector('#hotkey-editor [data-action="template.awaitingDiag"]').textContent, 'Press keys…');
+  doc.body.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
   const keys = doc.getElementById('hotkey-editor');
   const key = id => keys.querySelector(`[data-action="${id}"]`);

@@ -1,7 +1,8 @@
 /* Settings page editors that do not fit the one-value-per-row settings:
    template wording (note-templates.js) and shortcut keys (hotkey-model.js).
    Both save to their own storage records as you edit, and open portal tabs
-   pick the changes up immediately. */
+   pick the changes up immediately. Each template shows its shortcut, and
+   "Set shortcut" jumps to the recorder already listening for it. */
 (() => {
   'use strict';
   const T = globalThis.UBIFPlusNoteTemplates;
@@ -23,11 +24,14 @@
     const note = el('p', 'Edits save as you type. Restore default to go back to the standard wording.', { class: 'note', role: 'status', 'aria-live': 'polite' });
     templateRoot.append(tabs, list, note);
     const open = new Set(), timers = new Map();
+    let shortcutBindings = {};
     for (const g of T.GROUPS) {
       const button = el('button', g.name, { type: 'button', 'data-group': g.id });
       button.addEventListener('click', () => { group = g.id; render(T.list()); });
       tabs.append(button);
     }
+    globalThis.UBIFPlusTemplateEditor = Object.freeze({ showGroup: id => { if (T.GROUPS.some(g => g.id === id)) { group = id; render(T.list()); } } });
+    if (H) { H.load().then(next => { shortcutBindings = next; render(T.list()); }); H.subscribe(next => { shortcutBindings = next; if (document.activeElement?.tagName !== 'TEXTAREA') render(T.list()); }); }
     function render(templates) {
       for (const button of tabs.children) button.setAttribute('aria-pressed', String(button.dataset.group === group));
       const focused = document.activeElement?.dataset?.template;
@@ -42,10 +46,17 @@
         const area = el('textarea', '', { 'data-template': template.id, maxlength: String(T.MAX), spellcheck: 'true', 'aria-label': `${template.name} wording` });
         area.value = template.text;
         const count = el('span', `${template.text.length} / ${T.MAX}`);
-        const restore = el('button', 'Restore default', { type: 'button' });
+        const restore = el('button', 'Restore default', { type: 'button', class: 'grow' });
         restore.disabled = !template.edited;
         const tools = el('div', '', { class: 'tools' });
-        tools.append(count, restore);
+        tools.append(count);
+        if (H) {
+          const combo = shortcutBindings[`template.${template.id}`];
+          const shortcut = el('button', combo ? `Shortcut ${H.format(combo)} · Change` : 'Set shortcut', { type: 'button', 'aria-label': `${combo ? 'Change' : 'Set'} the ${template.name} shortcut` });
+          shortcut.addEventListener('click', () => globalThis.UBIFPlusOptions?.open(`shortcut:template.${template.id}`));
+          tools.append(shortcut);
+        }
+        tools.append(restore);
         area.addEventListener('input', () => {
           count.textContent = `${area.value.length} / ${T.MAX}`;
           clearTimeout(timers.get(template.id));
@@ -69,7 +80,7 @@
       if (!details) continue;
       details.querySelector('.badge')?.remove();
       if (template.edited) details.querySelector('summary small').before(el('span', 'Edited', { class: 'badge' }));
-      details.querySelector('.tools button').disabled = !template.edited;
+      details.querySelector('.tools .grow').disabled = !template.edited;
     } });
     T.load().then(render, () => say(note, 'Could not read templates.', true));
   }
@@ -155,6 +166,15 @@
     H.subscribe(next => { bindings = next; if (!listening) render(); });
     H.load().then(next => { bindings = next; render(); });
     render();
+    globalThis.UBIFPlusShortcutEditor = Object.freeze({
+      record: id => {
+        if (!actions.some(action => action.id === id)) return;
+        record(id);
+        const row = list.querySelector(`[data-action="${id}"]`)?.closest('.key-row');
+        if (row) { row.scrollIntoView?.({ block: 'center' }); row.setAttribute('data-flash', ''); setTimeout(() => row.removeAttribute('data-flash'), 1700); }
+      },
+      listening: () => Boolean(listening)
+    });
   }
 
   /* The editors follow their feature switch like the other dependent rows. */

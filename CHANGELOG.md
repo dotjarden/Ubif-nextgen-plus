@@ -6,6 +6,15 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Added
 
+- **Reorganized settings**: the toolbar popup is the full settings page, grouped into feature cards, with **Open in tab**.
+  - **Finding settings:** search that jumps to a setting, a Changed filter, greyed-out options that say why, and deep links from Portal.
+  - **Controls:** sliders and presets.
+  - **Templates:** one Templates page for message and note templates.
+  - **Layouts and store emails:** lists of saved layouts and store emails, each with a reset.
+  - **Backup and reset:** export/import of your setup, and Reset with a choice of what to reset.
+  - **What's new:** shown once after an update.
+
+  No setting was removed and stored preferences carry over.
 - **Note templates**: eight work-order status and two lead templates under Portal's notes fields and the Update Today editor, and four check-in templates under Additional Details. Templates are inserted at the caret or beside existing text, never over it; wording is editable in Settings → Note templates with a per-template restore.
 - **Keyboard shortcuts**: record a key combination for any template, Samsung form or dark mode in Settings → Keyboard shortcuts. Shortcuts work while typing, and combinations the browser or universal search use are refused.
 - **Dark mode options**: a grayscale control and a dimmed variant.

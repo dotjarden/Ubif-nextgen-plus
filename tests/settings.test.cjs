@@ -6,8 +6,14 @@ const vm = require('node:vm');
 
 const read = name => fs.readFileSync(`${__dirname}/../extension/${name}`, 'utf8');
 const settingsScript = read('settings.js');
-const popupScript = read('popup.js');
-const popupHtml = read('popup.html');
+const optionsHtml = read('options.html');
+const optionsScripts = ['settings.js', 'note-templates.js', 'hotkey-model.js', 'message-model.js', 'message-ui.js', 'whats-new.js', 'settings-ui.js', 'options.js', 'settings-editors.js'];
+/* The full settings page with its scripts, in page order. */
+function optionsPage(hash = '', url = `chrome-extension://abcdef/options.html${hash}`) {
+  const dom = new JSDOM(optionsHtml, { url, runScripts: 'outside-only', pretendToBeVisual: true });
+  return dom;
+}
+const loadOptions = w => { for (const name of optionsScripts) w.eval(read(name)); };
 const searchModel = read('search-model.js');
 const searchScript = read('search.js');
 const scannerScript = read('scanner.js');
@@ -135,33 +141,36 @@ test('a failed write rejects and leaves the stored value alone', async t => {
   assert.equal((await S.get()).search, true, 'the rejected value is not remembered');
 });
 
-test('the toolbar button opens a popup wired to every settings key', async t => {
-  assert.equal(manifest.action.default_popup, 'popup.html');
+test('the toolbar button opens the full settings, with a control for every setting', async t => {
+  assert.equal(manifest.action.default_popup, 'options.html', 'the toolbar opens the full settings');
+  assert.equal(manifest.options_ui.page, 'options.html');
+  assert.equal(manifest.options_ui.open_in_tab, true);
   assert.equal(manifest.permissions.includes('storage'), true);
   assert.equal(manifest.content_scripts[1].js[0], 'settings.js', 'settings load before the consumers');
   assert.equal(manifest.content_scripts[1].run_at, 'document_start', 'settings are ready for the document_start theme and every idle script');
   assert.equal(manifest.content_scripts[2].js.includes('settings.js'), false, 'one settings module per world');
-  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html', runScripts: 'outside-only' });
+  const dom = optionsPage();
   t.after(() => dom.window.close());
   const doc = dom.window.document;
-  assert.deepEqual([...doc.querySelectorAll('script')].map(node => node.getAttribute('src')), ['settings.js', 'note-templates.js', 'hotkey-model.js', 'popup.js', 'popup-editors.js']);
+  assert.deepEqual([...doc.querySelectorAll('script')].map(node => node.getAttribute('src')), optionsScripts);
   dom.window.eval(settingsScript);
-  const controls = [...doc.querySelectorAll('[data-key]')];
-  const keys = controls.map(node => node.dataset.key);
+  const keys = [...doc.querySelectorAll('[data-key]')].map(node => node.dataset.key);
   assert.equal(new Set(keys).size, keys.length, 'no control shares a key');
-  assert.deepEqual([...keys].sort(), Object.keys(dom.window.UBIFPlusSettings.defaults).sort());
+  const combined = [...keys, ...[...doc.querySelectorAll('[data-keys]')].flatMap(node => node.dataset.keys.split(' '))];
+  assert.deepEqual([...combined].sort(), Object.keys(dom.window.UBIFPlusSettings.defaults).sort(), 'every setting, once');
   const links = [...doc.querySelectorAll('footer a')].map(a => a.href);
   assert.ok(links.includes('https://github.com/dotjarden/Ubif-nextgen-plus/issues'), 'feature request target');
   assert.ok(links.some(href => href.includes('buymeacoffee.com/jarden')), 'buy me a coffee target');
+  const groups = [...doc.querySelectorAll('nav [data-group]')].map(a => a.textContent);
+  assert.deepEqual(groups, ['General', 'Finding things', 'Work orders', 'Customers', 'Check-in', 'Templates', 'About & updates']);
 });
 
-test('the popup shows saved settings and writes every edit back', async t => {
-  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html', runScripts: 'outside-only' });
+test('the settings page shows saved settings and writes every edit back', async t => {
+  const dom = optionsPage('#search');
   t.after(() => dom.window.close());
   const w = dom.window, doc = w.document;
   const s = storage(w, { [KEY]: { search: false, searchDebounceMs: 5000 } });
-  w.eval(settingsScript);
-  w.eval(popupScript);
+  loadOptions(w);
   await tick(w);
   assert.equal(doc.querySelector('[data-key=search]').checked, false, 'stored value shown');
   assert.equal(doc.querySelector('[data-key=board]').checked, true, 'unset feature defaults to on');
@@ -174,22 +183,51 @@ test('the popup shows saved settings and writes every edit back', async t => {
   assert.equal(s.writes.at(-1)[KEY].board, false, 'written immediately, no save button');
   assert.match(doc.getElementById('ubif-status').textContent, /Saved/);
   const refresh = doc.querySelector('[data-key=boardRefreshSec]');
+  board.checked = true; board.dispatchEvent(new w.Event('change')); await tick(w);
   refresh.value = '5';
   refresh.dispatchEvent(new w.Event('change'));
   await tick(w);
   assert.equal(s.writes.at(-1)[KEY].boardRefreshSec, 15, 'out-of-range input clamped before storing');
+  doc.querySelector('[data-preset="boardRefreshSec:300"]').click();
+  await tick(w);
+  assert.equal(s.data[KEY].boardRefreshSec, 300, 'preset buttons fill the number');
+  assert.equal(doc.querySelector('[data-preset="boardRefreshSec:300"]').getAttribute('aria-pressed'), 'true');
   s.fail(true);
   doc.querySelector('[data-key=columns]').checked = false;
   doc.querySelector('[data-key=columns]').dispatchEvent(new w.Event('change'));
   await tick(w);
   assert.match(doc.getElementById('ubif-status').textContent, /Could not save/);
-  // Both footer buttons open a new tab instead of navigating the popup.
+  // Both footer buttons open a new tab instead of navigating the page.
   const links = [...doc.querySelectorAll('footer a')];
   links.forEach(link => link.click());
-  assert.deepEqual(s.opened, [
+  assert.deepEqual(s.opened.slice(-2), [
     'https://github.com/dotjarden/Ubif-nextgen-plus/issues',
     'https://www.buymeacoffee.com/jarden'
   ]);
+});
+
+test('the theme choice sets dark and dimmed together, and sliders save while dragging', async t => {
+  const dom = optionsPage('#appearance');
+  t.after(() => dom.window.close());
+  const w = dom.window, doc = w.document, s = storage(w);
+  loadOptions(w); await tick(w);
+  const choose = value => { const radio = doc.querySelector(`#appearance input[name=theme][value=${value}]`); radio.checked = true; radio.dispatchEvent(new w.Event('change')); };
+  assert.equal(doc.querySelector('#appearance input[name=theme]:checked').value, 'off');
+  assert.equal(doc.querySelector('[data-key=darkBrightness]').disabled, true);
+  assert.equal(doc.querySelector('[data-key=darkBrightness]').closest('.row').querySelector('.why').textContent, 'Choose Dark or Dimmed to change this.');
+  choose('dim'); await tick(w);
+  assert.equal(s.data[KEY].darkMode, true); assert.equal(s.data[KEY].darkDimmed, true);
+  choose('dark'); await tick(w);
+  assert.equal(s.data[KEY].darkDimmed, false);
+  const slider = doc.querySelector('[data-key=darkBrightness]');
+  assert.equal(slider.disabled, false);
+  slider.value = '120'; slider.dispatchEvent(new w.Event('input'));
+  assert.equal(slider.closest('.row').querySelector('output').textContent, '120%', 'value shown at once');
+  await tick(w, 250);
+  assert.equal(s.data[KEY].darkBrightness, 120);
+  doc.querySelector('[data-reset=appearance]').click(); await tick(w);
+  assert.equal(s.data[KEY].darkMode, false, 'card reset includes the theme choice');
+  assert.equal(s.data[KEY].darkBrightness, 100);
 });
 
 test('universal search follows its settings and switches itself off live', async t => {
@@ -314,28 +352,36 @@ test('column work follows the columns setting', async t => {
 });
 
 test('settings navigation, search, dependencies, reset and external edits stay in sync', async t => {
-  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html#scanner', runScripts: 'outside-only' });
+  const dom = optionsPage('#scanner');
   t.after(() => dom.window.close());
   const w = dom.window, doc = w.document;
   const s = storage(w, { [KEY]: { scannerOEMConfirm: false, search: false } });
-  let opened = false;
-  w.chrome.runtime.openOptionsPage = () => { opened = true; };
-  w.eval(settingsScript); w.eval(popupScript); await tick(w);
-  assert.equal(doc.querySelector('#scanner').hidden, false);
-  assert.equal(doc.querySelector('#search').hidden, true);
-  assert.equal(doc.querySelector('[data-key=scannerSearch]').disabled, true);
+  loadOptions(w); await tick(w);
+  assert.equal(doc.querySelector('#group-finding').hidden, false, 'a card link opens its group');
+  assert.equal(doc.querySelector('#group-workorders').hidden, true);
+  assert.equal(doc.querySelector('nav [data-group=finding]').getAttribute('aria-current'), 'page');
+  const scannerSearch = doc.querySelector('[data-key=scannerSearch]');
+  assert.equal(scannerSearch.disabled, true);
+  assert.match(scannerSearch.closest('.row').querySelector('.why').textContent, /Turn on Universal search to change this/);
   const filter = doc.querySelector('#settings-search');
   filter.value = 'notification'; filter.dispatchEvent(new w.Event('input'));
-  assert.equal(doc.querySelector('#support').hidden, false);
-  assert.equal(doc.querySelector('#scanner').hidden, true);
+  const results = [...doc.querySelectorAll('#search-list button')];
+  assert.ok(results.some(b => /Desktop notifications/.test(b.textContent) && /Customers › Support chat/.test(b.textContent)), 'results name their place');
+  assert.equal(doc.querySelector('#group-finding').hidden, true, 'groups give way to results');
+  results.find(b => /Desktop notifications/.test(b.textContent)).click();
+  assert.equal(filter.value, '');
+  assert.equal(doc.querySelector('#group-customers').hidden, false, 'a result jumps to its group');
+  const row = doc.querySelector('[data-key=supportDesktopNotifications]').closest('.row');
+  assert.equal(row.closest('details').open, true, 'and opens its options');
+  assert.equal(row.hasAttribute('data-flash'), true, 'and highlights it');
   filter.value = 'no such setting'; filter.dispatchEvent(new w.Event('input'));
   assert.equal(doc.querySelector('#no-results').hidden, false);
-  doc.querySelector('[data-section=scanner]').click();
+  doc.querySelector('nav [data-group=finding]').click();
   assert.equal(filter.value, '');
-  assert.equal(doc.querySelector('#scanner').hidden, false);
+  assert.equal(doc.querySelector('#group-finding').hidden, false);
   doc.querySelector('[data-reset=scanner]').click(); await tick(w);
   assert.equal(s.data[KEY].scannerOEMConfirm, true);
-  assert.equal(s.data[KEY].search, false, 'section reset preserves unrelated preferences');
+  assert.equal(s.data[KEY].search, false, 'card reset preserves unrelated preferences');
   s.changed({ ...s.data[KEY], scannerReceiving: false });
   assert.equal(doc.querySelector('[data-key=scannerOEMConfirm]').disabled, true);
   assert.equal(doc.querySelector('[data-key=scannerOpenLinks]').disabled, false);
@@ -343,9 +389,21 @@ test('settings navigation, search, dependencies, reset and external edits stay i
   const control = doc.querySelector('[data-key=scannerOpenLinks]');
   control.checked = false; control.dispatchEvent(new w.Event('change')); await tick(w);
   assert.equal(control.checked, true, 'failed writes restore the displayed saved value');
-  doc.querySelector('#open-settings').click();
-  assert.equal(opened, true);
-  assert.equal(manifest.options_ui.page, 'popup.html');
+});
+
+test('the changed filter lists only settings that differ from their defaults', async t => {
+  const dom = optionsPage();
+  t.after(() => dom.window.close());
+  const w = dom.window, doc = w.document;
+  storage(w, { [KEY]: { searchMinChars: 5, supportUnreadBadge: false } });
+  loadOptions(w); await tick(w);
+  assert.equal(doc.getElementById('changed-count').textContent, '2');
+  doc.getElementById('changed-only').click();
+  const visibleRows = [...doc.querySelectorAll('.row:not(.main)')].filter(row => !row.hidden && !row.closest('[hidden]'));
+  assert.deepEqual(visibleRows.map(row => row.querySelector('[data-key]').dataset.key).sort(), ['searchMinChars', 'supportUnreadBadge']);
+  assert.equal(doc.querySelector('#group-general').hidden, true, 'groups without changes are hidden');
+  doc.getElementById('changed-only').click();
+  assert.equal(doc.querySelector('#group-general').hidden, false);
 });
 
 test('disabled search categories make no requests and new-tab preference reaches results', async t => {
@@ -395,14 +453,14 @@ test('board preferences hide empty lanes, disable dragging, and stop periodic re
 });
 
 test('Updates and help supports navigation, search, external links and explicit extension reload', async t => {
-  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html#updates', runScripts: 'outside-only' });
+  const dom = optionsPage('#updates');
   t.after(() => dom.window.close());
   const w = dom.window, doc = w.document;
   const s = storage(w);
   let reloads = 0;
   w.chrome.runtime.reload = () => { reloads++; };
-  w.eval(settingsScript); w.eval(popupScript); await tick(w);
-  assert.equal(doc.querySelector('#updates').hidden, false);
+  loadOptions(w); await tick(w);
+  assert.equal(doc.querySelector('#group-about').hidden, false);
   assert.equal(doc.querySelector('#preview-note').hidden, true);
   assert.equal(reloads, 0, 'opening settings never reloads the extension');
   doc.querySelector('#reload-extension').click();
@@ -410,33 +468,42 @@ test('Updates and help supports navigation, search, external links and explicit 
   const links = [...doc.querySelectorAll('#updates [data-external]')];
   links.forEach(link => link.click());
   assert.deepEqual(s.opened, links.map(link => link.href));
+  assert.ok(doc.querySelectorAll('#whats-new-list li').length > 0, 'what is new is listed');
   const search = doc.querySelector('#settings-search');
   search.value = 'git'; search.dispatchEvent(new w.Event('input'));
-  assert.equal(doc.querySelector('#updates').hidden, false);
+  assert.ok([...doc.querySelectorAll('#search-list button')].some(b => /Update the extension/.test(b.textContent)));
   assert.equal(doc.querySelector('#no-results').hidden, true);
 });
 
 test('localhost preview cannot reload the installed extension', async t => {
-  const dom = new JSDOM(popupHtml, { url: 'http://localhost/extension/popup.html#updates', runScripts: 'outside-only' });
+  const dom = optionsPage('', 'http://localhost/extension/options.html#updates');
   t.after(() => dom.window.close());
-  dom.window.eval(settingsScript); dom.window.eval(popupScript); await tick(dom.window);
+  loadOptions(dom.window); await tick(dom.window);
   assert.equal(dom.window.document.querySelector('#reload-extension').disabled, true);
   assert.equal(dom.window.document.querySelector('#preview-note').hidden, false);
 });
 
-test('toolbar popup keeps its own layout while full settings use the responsive page layout', async t => {
+test('as the toolbar popup the page keeps a fixed size, opens in a tab on request, and shows what is new once', async t => {
   for (const isPopup of [true, false]) {
-    const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html', runScripts: 'outside-only' });
+    const dom = optionsPage('#board');
     t.after(() => dom.window.close());
-    const w = dom.window;
-    storage(w);
-    w.chrome.extension = { getViews: options => {
-      assert.equal(options.type, 'popup');
-      return isPopup ? [w] : [];
-    } };
-    w.eval(settingsScript); w.eval(popupScript); await tick(w);
-    assert.equal(w.document.documentElement.classList.contains('full-page'), !isPopup);
-    assert.equal(w.document.querySelector('[data-key=search]').disabled, false);
+    const w = dom.window, doc = w.document;
+    const s = storage(w);
+    w.chrome.runtime.getURL = path => `chrome-extension://abcdef/${path}`;
+    w.chrome.extension = { getViews: options => { assert.equal(options.type, 'popup'); return isPopup ? [w] : []; } };
+    w.close = () => {};
+    loadOptions(w); await tick(w);
+    assert.equal(doc.documentElement.classList.contains('in-popup'), isPopup);
+    assert.equal(doc.getElementById('open-settings').hidden, !isPopup, 'Open in tab only in the popup');
+    assert.equal(doc.querySelector('[data-key=boardRefreshSec]').closest('details').open, true, 'options are expanded, not hidden behind a click');
+    assert.equal(doc.getElementById('news-banner').hidden, false, 'what is new after an update');
+    if (isPopup) {
+      doc.getElementById('open-settings').click();
+      assert.deepEqual(s.opened, ['chrome-extension://abcdef/options.html#board'], 'the tab opens at the same place');
+      doc.getElementById('news-dismiss').click(); await tick(w);
+      assert.equal(doc.getElementById('news-banner').hidden, true);
+      assert.equal(s.data['ubif-plus.whats-new-seen.v1'], w.UBIFPlusWhatsNew.id);
+    }
   }
 });
 
@@ -506,12 +573,12 @@ test('two settings pages serialize writes and an already-open portal reacts with
 });
 
 test('popup accepts rapid edits during slow saves and numeric input applies before blur', async t => {
-  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html#board', runScripts: 'outside-only' });
+  const dom = optionsPage('#board');
   t.after(() => dom.window.close());
   const w = dom.window, doc = w.document, s = storage(w);
   const write = w.chrome.storage.local.set;
   w.chrome.storage.local.set = async value => { await tick(w, 30); return write(value); };
-  w.eval(settingsScript); w.eval(popupScript); await tick(w);
+  loadOptions(w); await tick(w);
   const edit = (key, value) => {
     const control = doc.querySelector(`[data-key=${key}]`);
     assert.equal(control.disabled, false);
@@ -549,10 +616,10 @@ test('Arrivals size migrates from the old preference and reset takes precedence'
 });
 
 test('Tables settings save Arrivals page size and disable only its dependent dropdown', async t => {
-  const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html#columns', runScripts: 'outside-only' });
+  const dom = optionsPage('#columns');
   t.after(() => dom.window.close());
   const w = dom.window, s = storage(w, { [KEY]: { columns: false, search: false } });
-  w.eval(settingsScript); w.eval(popupScript); await tick(w);
+  loadOptions(w); await tick(w);
   const select = w.document.querySelector('[data-key=arrivalsPageSize]');
   assert.equal(select.disabled, false, 'pagination is independent of custom columns');
   select.value = '100'; select.dispatchEvent(new w.Event('change')); await tick(w);

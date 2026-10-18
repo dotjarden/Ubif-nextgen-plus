@@ -74,6 +74,8 @@
     .item small{display:block;font-size:12px;color:var(--aui-on-surface-soft,#66636d)}
     .item kbd{float:right;font:11px/1.6 inherit;color:var(--aui-on-surface-soft,#66636d)}
     .empty{margin:8px 10px;font-size:13px;color:var(--aui-on-surface-soft,#66636d)}
+    .edit-link{flex:none;margin:0;padding:9px 14px;border:0;border-top:1px solid var(--aui-outline-variant,#e4e4e7);background:none;text-align:left;font-size:13px;color:var(--aui-primary,#8224ce);cursor:pointer}
+    .edit-link:hover{background:var(--aui-surface-variant,#f3f0f6)}
     .status{margin:4px 0 0;font-size:12px;color:var(--aui-on-surface-soft,#66636d)}
     .status:empty{display:none}.status[data-error=true]{color:var(--aui-status-error,#b42318)}
   `;
@@ -99,7 +101,9 @@
     const menu = el('div', '', { class: 'menu', role: 'dialog', 'aria-label': 'Note templates', hidden: '' });
     const search = el('input', '', { type: 'search', class: 'search', placeholder: 'Find a template', 'aria-label': 'Find a template' });
     const list = el('div', '', { class: 'list' });
-    menu.append(search, list);
+    const edit = el('button', 'Edit templates in settings', { type: 'button', class: 'edit-link' });
+    edit.addEventListener('click', () => { close(); openSettings(where === 'checkin' ? '#templates/notes/checkin' : '#templates/notes'); });
+    menu.append(search, list, edit);
     const status = el('p', '', { class: 'status', role: 'status', 'aria-live': 'polite' });
     shadow.append(style, open, menu, status);
 
@@ -245,6 +249,11 @@
     lastField = field;
     report(status, `Inserted ${template.name}.`);
     return true;
+  }
+
+  function openSettings(hash) {
+    try { chrome.runtime.sendMessage({ type: 'ubif-plus-open-settings', hash }).catch?.(() => {}); }
+    catch { toast('The extension was reloaded. Refresh this page to open settings.', true); }
   }
 
   function toast(text, error) {
