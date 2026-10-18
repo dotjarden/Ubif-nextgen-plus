@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "UBIF NextGen Plus",
   "description": "Update Today work order board, Portal notes and scheduling, scanning, universal search, custom columns, dark mode, note templates, keyboard shortcuts, and Samsung exception forms.",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "permissions": [
     "storage",
     "notifications"

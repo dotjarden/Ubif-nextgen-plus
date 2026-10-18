@@ -4,6 +4,8 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-10-18
+
 ### Added
 
 - **Buyback for attached parts**: scanning a part serial that's reserved to a work order now shows **Print buyback**, which opens that work order and uses its native buyback label action, like sold serials.

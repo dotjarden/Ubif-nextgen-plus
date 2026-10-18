@@ -8,9 +8,9 @@
 
 ---
 
-**Latest release: [0.9.0](https://github.com/dotjarden/Ubif-nextgen-plus/releases/tag/v0.9.0)** · [What changed](CHANGELOG.md#090--2026-10-16)
+**Latest release: [0.9.1](https://github.com/dotjarden/Ubif-nextgen-plus/releases/tag/v0.9.1)** · [What changed](CHANGELOG.md#091--2026-10-18)
 
-**New in 0.9.0:** scans reach Portal's own scan fields (such as the check-in Add Arrival panel) instead of universal search; a tidier sidebar with labelled collapsed icons and a More row that opens its menu; a reworked Update Today board and editor with Portal messages beside it; customer message templates; check-in Extra Details and a Battery not working shortcut. See the [changelog](CHANGELOG.md#090--2026-10-16) for everything.
+**New in 0.9.1:** print item labels and buyback labels for work order parts straight from a scan in universal search; dark mode; Samsung exception forms; note templates; keyboard shortcuts. See the [changelog](CHANGELOG.md#091--2026-10-18) for everything.
 
 Built for Chrome and `portal.ubreakifix.net`. Runs inside your existing portal session, with no additional account or subscription. This is an independent extension, not an official UBIF or Asurion product.
 
