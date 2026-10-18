@@ -55,14 +55,21 @@ test('single sold serial is revalidated and binds an intent to its own SKU and w
   assert.match(paths[1], /boh\/inventory\/12345-1234567890\?/);
 });
 test('no sold inventory, missing sale, changed SKU, and session errors never prepare printing', async t => {
-  for (const detail of [null, { ItemNumber: '12345', SerialStatus: 'Sold', WorkOrderId: 56789 }, { ItemNumber: '99999', SerialStatus: 'Sold', SalesOrderNumber: 'SO-1', WorkOrderId: 56789 }, { ItemNumber: '12345', SerialStatus: 'Available', SalesOrderNumber: 'SO-1', WorkOrderId: 56789 }, 'unauthorized']) {
+  for (const detail of [null, { ItemNumber: '12345', SerialStatus: 'Sold', WorkOrderId: 56789 }, { ItemNumber: '99999', SerialStatus: 'Sold', SalesOrderNumber: 'SO-1', WorkOrderId: 56789 }, { ItemNumber: '12345', SerialStatus: 'Available', SalesOrderNumber: 'SO-1', WorkOrderId: 56789 }, { ItemNumber: '12345', SerialStatus: 'Reserved' }, 'unauthorized']) {
     const w = boot(t);
     w.fetch = async path => detail === 'unauthorized' ? { ok: false, status: 403 } : response(path.includes('/inventory?') ? { value: detail ? [inventory('12345-1234567890')] : [], '@odata.count': detail ? 1 : 0 } : detail);
     w.eval(content); start(w); await flush(w);
     assert.equal(w.sessionStorage.getItem(KEY), null);
     assert.equal(w.document.querySelector('#ubif-buyback button').disabled, false);
-    assert.match(w.document.querySelector('#ubif-buyback p').textContent, /No sold|no linked|permissions/);
+    assert.match(w.document.querySelector('#ubif-buyback p').textContent, /No sold|not attached|permissions/);
   }
+});
+test('a serial reserved to a work order opens that work order to print', async t => {
+  const w = boot(t);
+  w.fetch = async () => response({ ItemNumber: '12345', SerialStatus: 'Reserved', WorkOrderId: 56789 });
+  w.eval(content); w.location.assign = () => {}; start(w, { sku: '12345', serial: '12345-1234567890' }); await flush(w);
+  const intent = JSON.parse(w.sessionStorage.getItem(KEY));
+  assert.equal(intent.order, '56789'); assert.equal(intent.serial, '12345-1234567890');
 });
 test('navigation discards an in-flight search result lookup', async t => {
   const w = boot(t); let resolve;

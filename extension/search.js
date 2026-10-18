@@ -151,7 +151,7 @@
         link.addEventListener('click', () => globalThis.UBIFPlusBuyback?.cancel());
         wrapper.append(link);
         if (config.searchBuyback && row.buyback) {
-          const print = el('button', 'Print buyback', { type: 'button', class: 'ubif-buyback-action', 'aria-label': `Print buyback label for ${row.title}`, title: 'Print from a sold serial’s linked work order' });
+          const print = el('button', 'Print buyback', { type: 'button', class: 'ubif-buyback-action', 'aria-label': `Print buyback label for ${row.title}`, title: 'Print from the serial’s linked work order' });
           print.onclick = event => { event.preventDefault(); event.stopPropagation(); globalThis.UBIFPlusBuyback?.start(row.buyback, wrapper); };
           wrapper.append(print);
         }

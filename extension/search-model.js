@@ -58,6 +58,12 @@
     if (String(record.SerialStatus || '').trim().toLowerCase() !== 'available' || String(record.ItemNumber) === 'BB0001' || !serial || !text) return {};
     return { reprint: { serial, text } };
   }
+  // Sold serials, and parts reserved to a work order (attached but not yet
+  // sold), print from that work order's cart line.
+  function buybackSerial(record) {
+    const status = String(record.SerialStatus || '').trim().toLowerCase();
+    return status === 'sold' || (status === 'reserved' && /^\d+$/.test(String(record.WorkOrderId || '')));
+  }
   function rows(request, json, query) {
     const list = request.kind === 'workorders' ? json?.workOrders : request.kind === 'arrivals' ? json?.data : request.kind === 'serial' ? (json?.ItemNumber ? [json] : []) : json;
     if (!Array.isArray(list)) throw new Error('Unexpected search response');
@@ -67,7 +73,7 @@
         case 'workorders': return { key: `wo:${r.workorderId}`, title: `WO #${r.workorderId} · ${r.customer?.fullName || ''}`, detail: [r.deviceCatalog?.name].filter(Boolean).join(' · '), href: `/repair/workorder/${enc(r.workorderId)}` };
         case 'items': return { buyback: { sku: String(r.itemNumber) }, key: `item:${r.itemNumber}`, title: r.name || r.itemNumber, detail: [r.itemNumber, r.AvailableQuantity == null ? '' : `${r.AvailableQuantity} available`].filter(Boolean).join(' · '), href: `/boh/inventory/store-products/${enc(r.itemNumber)}` };
         case 'arrivals': return { key: `arrival:${r.arrivalId}`, title: r.customer?.fullName || `Arrival #${r.arrivalId}`, label: r.appointment && r.appointment !== '--' ? 'Appointment' : 'Arrival', detail: [r.customerDevice?.deviceName, r.appointment].filter(Boolean).join(' · '), href: `/check-in/arrivals/${enc(r.arrivalId)}` };
-        case 'serial': return { ...(String(r.SerialStatus).trim().toLowerCase() === 'sold' ? { buyback: { sku: String(r.ItemNumber), serial: query } } : {}), ...reprint(r, query), key: `serial:${query}`, title: r.ProductName || r.ItemNumber, detail: [query, r.Store].filter(Boolean).join(' · '), href: `/boh/inventory/store-products/${enc(r.ItemNumber)}` };
+        case 'serial': return { ...(buybackSerial(r) ? { buyback: { sku: String(r.ItemNumber), serial: query } } : {}), ...reprint(r, query), key: `serial:${query}`, title: r.ProductName || r.ItemNumber, detail: [query, r.Store].filter(Boolean).join(' · '), href: `/boh/inventory/store-products/${enc(r.ItemNumber)}` };
       }
     }).map((row, index) => ({ ...row, tags: tags(list[index], request.kind) }));
   }

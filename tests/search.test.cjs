@@ -199,6 +199,13 @@ test('buyback buttons sit beside item and sold serial links and bind their own r
   assert.equal(starts[1].node, buttons[2].parentElement);
   assert.equal(w.location.pathname, '/');
 });
+test('serial results reserved to a work order get a buyback button; unattached ones do not', t => {
+  const w = boot(t, async () => ok([]));
+  const rows = (record, query = '12345-1234567890') => w.UBIFPlusSearch.rows({ kind: 'serial' }, record, query)[0];
+  assert.equal(rows({ ItemNumber: '12345', SerialStatus: 'Reserved', WorkOrderId: 56789 }).buyback.serial, '12345-1234567890');
+  assert.equal(rows({ ItemNumber: '12345', SerialStatus: 'Reserved' }).buyback, undefined);
+  assert.equal(rows({ ItemNumber: '12345', SerialStatus: 'Available', WorkOrderId: 56789 }).buyback, undefined);
+});
 test('buyback setting removes buttons live while normal result links stay available', async t => {
   const dom = new JSDOM('<header><div class="components-header-searchbox"></div></header>', { url: 'https://portal.ubreakifix.net/', runScripts: 'outside-only' });
   t.after(() => dom.window.close()); const w = dom.window; let apply;

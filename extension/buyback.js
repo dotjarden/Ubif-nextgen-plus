@@ -1,4 +1,4 @@
-/* Inline search result -> sold serial -> native work order buyback action. */
+/* Inline search result -> sold or WO-reserved serial -> native work order buyback action. */
 (() => {
   'use strict';
   if (globalThis.__ubifPlusBuyback) return;
@@ -18,11 +18,14 @@
     return response.json();
   }
   const sold = row => String(row?.SerialStatus || '').trim().toLowerCase() === 'sold';
+  const reserved = row => String(row?.SerialStatus || '').trim().toLowerCase() === 'reserved';
   async function choose(row, sku, id, signal) {
     const detail = await json(`/api/boh/inventory/${encodeURIComponent(row.SerialNumber)}?includeQuarantineInfo=false&includeSalvageInfo=false`, signal);
     if (!active(id)) return;
-    if (String(detail.ItemNumber) !== sku || !sold(detail) || !String(detail.SalesOrderNumber || '').trim() || !/^\d+$/.test(String(detail.WorkOrderId || ''))) {
-      throw new Error('This serial has no linked sold work order. Open its item details to check it.');
+    // A sold serial needs its sales order; a reserved one is attached to an open work order.
+    const linked = (sold(detail) && String(detail.SalesOrderNumber || '').trim()) || reserved(detail);
+    if (String(detail.ItemNumber) !== sku || !linked || !/^\d+$/.test(String(detail.WorkOrderId || ''))) {
+      throw new Error('This serial is not attached to a work order. Open its item details to check it.');
     }
     const intent = { id: `${Date.now()}-${Math.random()}`, sku, serial: String(row.SerialNumber), order: String(detail.WorkOrderId), created: Date.now() };
     try { sessionStorage.setItem(KEY, JSON.stringify(intent)); } catch { throw new Error('Could not prepare printing. Allow tab session storage and try again.'); }
@@ -35,7 +38,7 @@
     primary.disabled = true;
     panel.querySelectorAll('li button').forEach(b => { b.disabled = true; });
     if (!row) panel.querySelector('ul')?.remove();
-    status.textContent = row ? 'Opening the sold work order…' : 'Finding sold serials…';
+    status.textContent = row ? 'Opening the linked work order…' : 'Finding sold serials…';
     try {
       if (row || target.serial) { await choose(row || { SerialNumber: target.serial }, sku, id, controller.signal); return; }
       const rows = [], seen = new Set();
