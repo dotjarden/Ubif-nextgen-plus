@@ -10,7 +10,7 @@
   const owns = () => document.documentElement.dataset.ubifPlusSearchOwner === owner;
   const { categories, plan, rows } = globalThis.UBIFPlusSearch;
   const S = globalThis.UBIFPlusSettings;
-  const fallback = { search: true, searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true, searchBuyback: true, searchInlineTags: true };
+  const fallback = { search: true, searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true, searchBuyback: true, searchLabels: true, searchInlineTags: true };
   let config = { ...fallback };
   const categoryKeys = { Customers: 'searchCustomers', 'Work orders': 'searchWorkOrders', Items: 'searchItems', Claims: 'searchClaims', 'Serial numbers': 'searchSerials' };
   const enabledCategories = () => categories.filter(name => config[categoryKeys[name]] !== false);
@@ -51,8 +51,10 @@
 
     #ubif-search-results .ubif-result-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
     #ubif-search-results .ubif-result-row > a { flex:1 1 200px; min-width:0; }
-    #ubif-search-results .ubif-buyback-action { flex:0 0 auto; padding:7px 10px; border:1px solid var(--aui-outline,#bbb); border-radius:8px; background:var(--aui-elevated-level-01,#fff); font-size:12px; }
-    #ubif-search-results .ubif-buyback-action:focus-visible { outline:2px solid var(--aui-primary,#8224ce); }
+    #ubif-search-results .ubif-buyback-action, #ubif-search-results .ubif-label-action { flex:0 0 auto; padding:7px 10px; border:1px solid var(--aui-outline,#bbb); border-radius:8px; background:var(--aui-elevated-level-01,#fff); font-size:12px; }
+    #ubif-search-results .ubif-buyback-action:focus-visible, #ubif-search-results .ubif-label-action:focus-visible { outline:2px solid var(--aui-primary,#8224ce); }
+    #ubif-search-results .ubif-label-action:disabled { cursor:wait; opacity:.6; }
+    #ubif-search-results .ubif-label-status { flex-basis:100%; margin:0 10px 8px; font-size:13px; }
     #ubif-search-results .ubif-result-row > #ubif-buyback { flex-basis:100%; margin:0 10px 8px; }
     #ubif-search-results .ubif-result-heading {display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;line-height:1.3;color:var(--aui-on-surface,#252629)}
     #ubif-search-results .ubif-result-tags {display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
@@ -152,6 +154,22 @@
           const print = el('button', 'Print buyback', { type: 'button', class: 'ubif-buyback-action', 'aria-label': `Print buyback label for ${row.title}`, title: 'Print from a sold serial’s linked work order' });
           print.onclick = event => { event.preventDefault(); event.stopPropagation(); globalThis.UBIFPlusBuyback?.start(row.buyback, wrapper); };
           wrapper.append(print);
+        }
+        if (config.searchLabels !== false && row.reprint) {
+          const print = el('button', 'Print label', { type: 'button', class: 'ubif-label-action', 'aria-label': `Print item label for ${row.reprint.serial}`, title: `Reprint the ${row.reprint.serial} inventory label on the Dymo printer` });
+          const note = el('p', '', { class: 'ubif-label-status', role: 'status', 'aria-live': 'polite', hidden: '' });
+          print.onclick = async event => {
+            event.preventDefault(); event.stopPropagation();
+            if (print.disabled || !globalThis.UBIFPlusLabel) return;
+            print.disabled = true; print.textContent = 'Printing…'; note.hidden = true;
+            const result = await globalThis.UBIFPlusLabel.print(row.reprint);
+            note.textContent = result.message; note.hidden = !result.message;
+            note.dataset.state = result.state;
+            print.textContent = result.state === 'printed' ? 'Printed' : 'Print label';
+            // A short cool-down keeps a double click or a bounced scan from printing twice.
+            setTimeout(() => { print.disabled = false; print.textContent = 'Print label'; }, result.state === 'printed' ? 2000 : 0);
+          };
+          wrapper.append(print, note);
         }
         section.append(wrapper);
       }

@@ -252,3 +252,13 @@ In **Settings → Messages & employee**, enable message templates, show or hide 
 The template bar follows the composer after conversation rerenders. Table side borders and rounding follow the first and last visible columns after reordering or hiding fields. Update Today uses the native tab label typography, spacing, muted inactive text, and 4px on-surface active indicator.
 
 The employee header anchor (`.components-header-opts-avatar`), signed-in name (`selectUser(state).givenName`), native tab structure, and inline result tag colors were checked against the R92.4 Portal components and its Asurion UI bundle.
+
+## Item label shortcut
+
+Scan or search an inventory serial (for example `400559-0000003979` or `I-0000003979`). When the serial is **Available**, its result shows **Print label**. One click prints the same label as Portal's item details → **Reprint Label** → **Confirm**: the product name and the full SKU-serial barcode on Portal's default 30330 label, sent to the first connected Dymo LabelWriter. The button disables briefly after a print so a double click or bounced scan does not print twice.
+
+Like Portal, the button is not offered for sold or other non-available serials or the buyback SKU (BB0001). After a successful print the extension writes Portal's `ReprintLabel` user action log entry (`Reprinted label for part …`), so the audit trail matches the native flow; only the confirmation dialog is skipped.
+
+Toggle **Universal search → Item label buttons in search** in extension settings (on by default). Turning universal search off also removes the buttons.
+
+Implementation notes: printing runs in `label-page.js` in the page's main world, using Portal's own `window.dymo.label.framework` (`getLabelWriterPrinters`, `openLabelXml`, `LabelSetBuilder`). The label XML is copied from Portal's `ubif-components.js` `LabelType.DefaultLabel`; if Portal changes its template, update the copy. Not mirrored from the native flow: its `InventoryManagementPurchasing` permission check on the button, and the "with active inventory count" suffix on the log entry. A physical print still needs a live check in a signed-in Portal tab.

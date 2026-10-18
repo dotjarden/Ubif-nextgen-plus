@@ -17,6 +17,7 @@
         "messages-page.js",
         "arrivals-page.js",
         "buyback-page.js",
+        "label-page.js",
         "checkin.js"
       ],
       "run_at": "document_start",
@@ -54,6 +55,7 @@
         "messages.js",
         "support.js",
         "buyback.js",
+        "label.js",
         "note-templates.js",
         "hotkey-model.js",
         "note-picker.js",

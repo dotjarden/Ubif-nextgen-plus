@@ -6,6 +6,7 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Added
 
+- **Item label printing in search**: scan or search an inventory serial and click **Print label** beside an available result to reprint its Dymo label — no product page, item details popup or confirm dialog. Portal's ReprintLabel action log is still written. Toggle it under Universal search → Item label buttons in search.
 - **Note templates**: eight work-order status and two lead templates under Portal's notes fields and the Update Today editor, and four check-in templates under Additional Details. Templates are inserted at the caret or beside existing text, never over it; wording is editable in Settings → Note templates with a per-template restore.
 - **Keyboard shortcuts**: record a key combination for any template, Samsung form or dark mode in Settings → Keyboard shortcuts. Shortcuts work while typing, and combinations the browser or universal search use are refused.
 - **Dark mode options**: a grayscale control and a dimmed variant.
