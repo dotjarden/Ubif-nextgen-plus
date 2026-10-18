@@ -20,6 +20,7 @@ Built for Chrome and `portal.ubreakifix.net`. Runs inside your existing portal s
 | --- | --- |
 | **Universal search** | Search customers, work orders, items, claims, and inventory serials from the portal header. Press **Cmd/Ctrl + K** to start. |
 | **Buyback labels** | Print inline with an item or sold serial search result; choose a sold serial when there are several. |
+| **Item labels** | Reprint an available inventory serial's Dymo label straight from its search result. |
 | **Barcode scanning** | Open work orders, follow portal QR links, send other scans to search, and scan repeatedly during purchase-order receiving. Portal's own scan fields—the check-in Add Arrival panel, work-order Scan label, Repair Estimate and check-out—keep their scans. |
 | **Extra Details** | Add Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA and Price Est to diagnosis. Saved with the order’s native Notes / Additional Details. A **Battery not working** shortcut fills every native “Can’t test” option. |
 | **Update Today** | See active work orders due today or earlier; click a card to schedule the next update, change a supported status, or read and add notes (⌘/Ctrl+Enter); open the customer's Portal messages beside the editor. Statuses with nothing due become drop targets above the board. |

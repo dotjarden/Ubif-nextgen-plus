@@ -6,6 +6,7 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Added
 
+- **Item label printing in search**: scan or search an inventory serial and click **Print label** beside an available result to reprint its Dymo label — no product page, item details popup or confirm dialog. Portal's ReprintLabel action log is still written. Toggle it under Universal search → Item label buttons in search.
 - **Reorganized settings**: the toolbar popup is the full settings page, grouped into feature cards, with **Open in tab**.
   - **Finding settings:** search that jumps to a setting, a Changed filter, greyed-out options that say why, and deep links from Portal.
   - **Controls:** sliders and presets.

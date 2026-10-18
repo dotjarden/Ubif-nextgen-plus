@@ -68,7 +68,7 @@ test('settings fall back to defaults, keep known keys only, and clamp the number
     search: true, board: true, scanner: true, columns: true, support: true, hideHomeCalendar: false, navEnhance: true,
     searchDebounceMs: 350, searchMinChars: 3, searchHotkey: true,
     boardRefreshSec: 60, boardIncludeTomorrow: false,
-    searchCustomers: true, searchWorkOrders: true, searchItems: true, searchClaims: true, searchSerials: true, searchNewTab: false, searchBuyback: true,
+    searchCustomers: true, searchWorkOrders: true, searchItems: true, searchClaims: true, searchSerials: true, searchNewTab: false, searchBuyback: true, searchLabels: true,
     scannerOpenLinks: true, scannerSearch: true, scannerReceiving: true, scannerOEMFocus: true, scannerOEMConfirm: true,
     columnsWorkorders: true, columnsArrivals: true, arrivalsPagination: true, arrivalsPageSize: 10, supportDesktopNotifications: true, supportUnreadBadge: true,
     supportMessagePreview: true, boardAutoRefresh: true, boardDragDrop: true, boardShowEmpty: true,

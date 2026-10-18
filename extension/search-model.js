@@ -44,6 +44,20 @@
     if (kind === 'arrivals') add(record.appointment && record.appointment !== '--' ? 'Appointment' : 'Arrival', 'light');
     return result;
   }
+  // The barcode Portal prints is the full SKU-serial, never the I- shorthand.
+  function labelSerial(record, query) {
+    if (typeof record.SerialNumber === 'string' && record.SerialNumber.trim()) return record.SerialNumber.trim();
+    const q = query.trim(), short = /^[Ii]-(\d{10})$/.exec(q), prefixed = /^[A-Za-z]-(\d{4,6}-\d{10})$/.exec(q);
+    if (/^\d{4,6}-\d{10}$/.test(q)) return q;
+    if (prefixed) return prefixed[1];
+    return short && /^\d{4,6}$/.test(String(record.ItemNumber)) ? `${record.ItemNumber}-${short[1]}` : '';
+  }
+  // Mirrors Portal's Reprint Label guard: available stock only, never the buyback SKU.
+  function reprint(record, query) {
+    const serial = labelSerial(record, query), text = String(record.ProductName || '').trim();
+    if (String(record.SerialStatus || '').trim().toLowerCase() !== 'available' || String(record.ItemNumber) === 'BB0001' || !serial || !text) return {};
+    return { reprint: { serial, text } };
+  }
   function rows(request, json, query) {
     const list = request.kind === 'workorders' ? json?.workOrders : request.kind === 'arrivals' ? json?.data : request.kind === 'serial' ? (json?.ItemNumber ? [json] : []) : json;
     if (!Array.isArray(list)) throw new Error('Unexpected search response');
@@ -53,7 +67,7 @@
         case 'workorders': return { key: `wo:${r.workorderId}`, title: `WO #${r.workorderId} · ${r.customer?.fullName || ''}`, detail: [r.deviceCatalog?.name].filter(Boolean).join(' · '), href: `/repair/workorder/${enc(r.workorderId)}` };
         case 'items': return { buyback: { sku: String(r.itemNumber) }, key: `item:${r.itemNumber}`, title: r.name || r.itemNumber, detail: [r.itemNumber, r.AvailableQuantity == null ? '' : `${r.AvailableQuantity} available`].filter(Boolean).join(' · '), href: `/boh/inventory/store-products/${enc(r.itemNumber)}` };
         case 'arrivals': return { key: `arrival:${r.arrivalId}`, title: r.customer?.fullName || `Arrival #${r.arrivalId}`, label: r.appointment && r.appointment !== '--' ? 'Appointment' : 'Arrival', detail: [r.customerDevice?.deviceName, r.appointment].filter(Boolean).join(' · '), href: `/check-in/arrivals/${enc(r.arrivalId)}` };
-        case 'serial': return { ...(String(r.SerialStatus).trim().toLowerCase() === 'sold' ? { buyback: { sku: String(r.ItemNumber), serial: query } } : {}), key: `serial:${query}`, title: r.ProductName || r.ItemNumber, detail: [query, r.Store].filter(Boolean).join(' · '), href: `/boh/inventory/store-products/${enc(r.ItemNumber)}` };
+        case 'serial': return { ...(String(r.SerialStatus).trim().toLowerCase() === 'sold' ? { buyback: { sku: String(r.ItemNumber), serial: query } } : {}), ...reprint(r, query), key: `serial:${query}`, title: r.ProductName || r.ItemNumber, detail: [query, r.Store].filter(Boolean).join(' · '), href: `/boh/inventory/store-products/${enc(r.ItemNumber)}` };
       }
     }).map((row, index) => ({ ...row, tags: tags(list[index], request.kind) }));
   }
