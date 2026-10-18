@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "UBIF NextGen Plus",
-  "description": "Update Today work order board, Portal notes and scheduling, scanning, universal search, and custom columns.",
+  "description": "Update Today work order board, Portal notes and scheduling, scanning, universal search, custom columns, dark mode, note templates, keyboard shortcuts, and Samsung exception forms.",
   "version": "0.9.0",
   "permissions": [
     "storage",
@@ -28,6 +28,16 @@
       ],
       "js": [
         "settings.js",
+        "vendor/darkreader.js",
+        "theme.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://portal.ubreakifix.net/*"
+      ],
+      "js": [
         "sidebar.js",
         "employee.js",
         "home.js",
@@ -43,7 +53,23 @@
         "message-ui.js",
         "messages.js",
         "support.js",
-        "buyback.js"
+        "buyback.js",
+        "note-templates.js",
+        "hotkey-model.js",
+        "note-picker.js",
+        "hotkeys.js",
+        "samsung-model.js",
+        "samsung.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://forms-prod.sprinklr.com/*"
+      ],
+      "js": [
+        "samsung-model.js",
+        "sprinklr.js"
       ],
       "run_at": "document_idle"
     }

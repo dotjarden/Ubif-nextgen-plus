@@ -285,6 +285,8 @@ test('the background worker turns chat messages into desktop notifications', () 
   let listener = null;
   const chrome = {
     runtime: { lastError: null, onMessage: { addListener: fn => { listener = fn; } } },
+    tabs: { onRemoved: { addListener: () => {} } },
+    storage: { session: {} },
     notifications: {
       create: (id, options, done) => { created.push({ id, options }); if (done) done(); },
       clear: (id, done) => { cleared.push(id); if (done) done(); }
@@ -294,7 +296,8 @@ test('the background worker turns chat messages into desktop notifications', () 
       setBadgeBackgroundColor: () => {}
     }
   };
-  new Function('chrome', background)(chrome);
+  const importScripts = name => new Function(fs.readFileSync(`${__dirname}/../extension/${name}`, 'utf8'))();
+  new Function('chrome', 'importScripts', background)(chrome, importScripts);
   assert.equal(typeof listener, 'function', 'the worker subscribes to the content script');
   listener({ type: 'ubif-plus-chat-message', text: 'Ready for pickup', unread: 3 });
   assert.equal(created.length, 1, 'one notification is raised');
@@ -330,10 +333,10 @@ test('the widget is still styled when animation frames are suspended', async t =
 
 test('the script loads on every portal page after the settings module', () => {
   assert.deepEqual(manifest.content_scripts[0].js, ['page.js', 'messages-page.js', 'arrivals-page.js', 'buyback-page.js', 'checkin.js']);
-  const scripts = manifest.content_scripts[1].js;
-  assert.equal(scripts[0], 'settings.js', 'settings load before the consumers');
-  assert.equal(scripts.includes('support.js'), true);
-  assert.deepEqual(manifest.content_scripts[1].matches, ['https://portal.ubreakifix.net/*'], 'every page, not one route');
+  assert.equal(manifest.content_scripts[1].js[0], 'settings.js', 'settings load before the consumers');
+  assert.equal(manifest.content_scripts[1].run_at, 'document_start');
+  assert.equal(manifest.content_scripts[2].js.includes('support.js'), true);
+  assert.deepEqual(manifest.content_scripts[2].matches, ['https://portal.ubreakifix.net/*'], 'every page, not one route');
   assert.equal(manifest.permissions.includes('notifications'), true, 'desktop notes need the notifications permission');
   assert.equal(manifest.background && manifest.background.service_worker, 'background.js', 'the desktop note is raised from the worker');
 });

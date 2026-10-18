@@ -349,6 +349,13 @@
       notesHeading.append(notesPanel.querySelector('h3'), reload);
       notesPanel.append(notesHeading, composer, historyHeading, notes);
       notesColumn.append(notesPanel);
+      // Note templates (note-picker.js) under both note boxes, once mounted.
+      setTimeout(() => {
+        const picker = globalThis.UBIFPlusNotePicker;
+        if (!picker || !noteText.isConnected) return;
+        picker.attach(noteText, 'notes', noteText.closest('.field'));
+        picker.attach(moveNote, 'notes', noteField);
+      }, 0);
       let uncertain = false;
       // The status note, its guidance and its save button only belong on screen
       // once a destination status is chosen.

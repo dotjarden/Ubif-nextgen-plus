@@ -4,6 +4,14 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ## [Unreleased]
 
+### Added
+
+- **Note templates**: eight work-order status and two lead templates under Portal's notes fields and the Update Today editor, and four check-in templates under Additional Details. Templates are inserted at the caret or beside existing text, never over it; wording is editable in Settings → Note templates with a per-template restore.
+- **Keyboard shortcuts**: record a key combination for any template, Samsung form or dark mode in Settings → Keyboard shortcuts. Shortcuts work while typing, and combinations the browser or universal search use are refused.
+- **Dark mode options**: a grayscale control and a dimmed variant.
+- **Samsung forms**: a button on Samsung work orders opens the Sprinklr GD Bypass, Fenrir Bypass or WER Request form filled from the order (IMEI, device, GSPN ticket), your Portal profile and your store, after a review dialog. Forms are filled and left for you to submit by default; automatic submission for GD Bypass and WER Request is an opt-in setting. Labels are matched exactly and failures are listed on the form.
+- **Dark mode** (Settings → Appearance, off by default): darkens the portal and the extension's panels using the bundled Dark Reader engine, with an option to follow your device's light/dark setting and brightness, contrast and sepia controls. Black and grey logos and icons, including table device icons, turn light; photos and colored branding keep their colors. Printing is unchanged, and reloads start dark without a white flash.
+
 ## [0.9.0] — 2026-10-16
 
 ### Added

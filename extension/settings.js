@@ -46,9 +46,28 @@
     boardRefreshSec: 60,
     boardIncludeTomorrow: false,
     hideHomeCalendar: false,
-    navEnhance: true
+    navEnhance: true,
+    darkMode: false,
+    darkModeFollowSystem: false,
+    darkBrightness: 100,
+    darkContrast: 100,
+    darkSepia: 0,
+    darkGrayscale: 0,
+    darkDimmed: false,
+    noteTemplates: true,
+    noteTemplatesCheckin: true,
+    hotkeys: true,
+    samsungForms: true,
+    samsungAutoSubmit: false,
+    samsungRepairType: 'Store',
+    samsungGdVersion: '',
+    samsungEmail: ''
   });
-  const range = { searchDebounceMs: [100, 2000], searchMinChars: [3, 10], boardRefreshSec: [15, 600] };
+  const choices = { samsungRepairType: ['Store', 'Kiosk'] };
+  const range = {
+    searchDebounceMs: [100, 2000], searchMinChars: [3, 10], boardRefreshSec: [15, 600],
+    darkBrightness: [50, 150], darkContrast: [50, 150], darkSepia: [0, 100], darkGrayscale: [0, 100]
+  };
   let current = { ...defaults }, hooked = false, revision = 0, writes = Promise.resolve();
   const listeners = new Set();
   const channel = name => (typeof chrome !== 'undefined' && chrome.storage && chrome.storage[name]) || null;
@@ -69,6 +88,7 @@
     }
     for (const [key, bounds] of Object.entries(range)) next[key] = clamp(Math.round(next[key]), bounds);
     if (![10, 25, 50, 100].includes(next.arrivalsPageSize)) next.arrivalsPageSize = defaults.arrivalsPageSize;
+    for (const [key, allowed] of Object.entries(choices)) if (!allowed.includes(next[key])) next[key] = defaults[key];
     return next;
   }
 

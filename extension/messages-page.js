@@ -4,7 +4,7 @@
   'use strict';
   if (globalThis.__ubifPlusMessagesPage) return;
   globalThis.__ubifPlusMessagesPage = true;
-  let launch = null, serial = 0, previous = '', bound = null, employeePrevious = null;
+  let launch = null, serial = 0, previous = '', bound = null, employeePrevious = null, techPrevious = null;
   const text = value => typeof value === 'string' || typeof value === 'number' ? String(value) : '';
   function readCard(node, expectedCustomer = '') {
     let found = null;
@@ -71,6 +71,12 @@
       const user = module.selectCurrentUser?.(state) || module.selectUser?.(state) || state.currentUser || state.auth?.user || state.session?.user || state.user?.profile || state.user;
       const firstName = text(user?.firstName || user?.givenName || user?.employee?.firstName).trim();
       if (employeePrevious !== firstName) { employeePrevious = firstName; window.postMessage({ source: 'ubif-plus', type: 'employee-context', firstName }, '*'); }
+      // Signed-in technician and store for the Samsung exception forms.
+      const store = module.selectCurrentStore?.(state) || state.auth?.currentStore;
+      const tech = { email: text(user?.email).trim(), name: [user?.givenName, user?.familyName].map(part => text(part).trim()).filter(Boolean).join(' '),
+        storeId: text(store?.storeId), storeName: text(store?.storeName).trim() };
+      const techFingerprint = JSON.stringify(tech);
+      if (techPrevious !== techFingerprint) { techPrevious = techFingerprint; window.postMessage({ source: 'ubif-plus', type: 'tech-context', ...tech }, '*'); }
       const open = module.selectChatPanelOpen(state), chat = module.selectChatPanelData(state);
       if (!open) launch = null;
       const customerId = text(chat?.customerId);
@@ -165,7 +171,7 @@
   addEventListener('message', event => {
     if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'board-chat-open') openBoardChat(event.data);
     if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'board-chat-close') closeBoardChat(event.data);
-    if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'message-context-request') { previous = ''; employeePrevious = null; connect(); }
+    if (event.source === window && event.data?.source === 'ubif-plus' && event.data.type === 'message-context-request') { previous = ''; employeePrevious = null; techPrevious = null; connect(); }
   });
   setInterval(connect, 500);
   connect();

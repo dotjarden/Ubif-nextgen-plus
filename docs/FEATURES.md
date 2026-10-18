@@ -9,15 +9,88 @@ Detailed behavior and limitations for UBIF NextGen Plus.
 Click the extension's toolbar icon for settings, then use the category navigation or **Find a setting** to locate a control. **Open in tab** opens the same controls in a browser tab; Chrome's extension **Options** opens that page too. Settings save immediately and apply to open portal tabs. Related controls are disabled when their parent feature is off, and each category has its own reset button. A failed save restores the previous value and displays an error.
 
 - **Home**: hide the Home calendar to give Quick actions and Today's to-do's more room, and turn the [sidebar improvements](#sidebar-090) on or off.
+- **Appearance**: turn on [dark mode](#dark-mode-unreleased) or its dimmed variant, limit it to when your device uses dark mode, and set brightness and contrast (50–150%), sepia and grayscale (0–100%).
+- **Note templates**: show [note templates](#note-templates-unreleased) under work-order notes and check-in Additional Details, and edit each template's wording.
+- **Keyboard shortcuts**: turn [shortcuts](#keyboard-shortcuts-unreleased) on or off and record a combination for each action.
 - **Universal search**: enable search, configure the shortcut, delay (100–2,000 ms) and minimum query length (3–10), choose each of the five result categories, and open results in new tabs. Disabled categories make no search requests. Work orders still require at least 5 digits and claims at least 6 characters.
 - **Update Today**: enable the board, include tomorrow by default, toggle periodic refresh and set its interval (15–600 seconds), allow status drag and drop, and show or hide empty status columns. Opening or returning to the board still refreshes it with periodic refresh off.
 - **Barcode scanning**: enable scanning, independently control opening work orders/portal links and forwarding other scans to search, enable purchase-order receiving, and choose automatic OEM field focus and confirmation. Turning confirmation off leaves valid serials for manual review.
+- **Samsung forms**: show the [Samsung forms button](#samsung-exception-forms-unreleased), submit GD Bypass and WER Request forms automatically (off by default), and set the repair location type, Galaxy Diagnostic Tool version and an email override.
 - **Tables**: enable custom columns separately for Workorders and Arrivals, toggle Arrivals pagination, and choose 10/25/50/100 rows per page. Manage visible columns, order, widths, presets, and layout resets with **Columns** on the relevant portal table, where the current tab's data is available.
 - **Support chat**: enable the movable/minimizable support window, desktop notifications, unread badges, and notification message previews separately. Disable previews for a generic new-message notification.
 
 Existing preferences are preserved. New settings retain the previous behavior by default; opening search results in a new tab is off by default. Category resets only restore that category's preferences, leaving saved column layouts intact. **Feature request** and **Buy me a coffee** open in new tabs.
 
 Settings live in one extension-local storage record (`ubif-plus.settings.v1`) shared by the popup and full settings page. No new permissions are required for the settings page.
+
+## Dark mode (Unreleased)
+
+Turn it on in **Settings → Appearance** (off by default). Changes apply to open portal tabs immediately. **Only when my device uses dark mode** follows your operating system's light/dark setting and switches with it. Brightness, contrast, sepia and grayscale adjust the result. **Dimmed instead of dark** softens bright whites without a dark background; icon inversion is skipped in that mode.
+
+The extension bundles [Dark Reader](https://darkreader.org/)'s dynamic theme engine (MIT, pinned in `package.json` and copied to `extension/vendor/` by `npm run vendor`). It recalculates the colors of the portal's own stylesheets and of the extension's panels, so it keeps working when Portal class names change. It runs in the extension's isolated content-script world and does not patch the page's JavaScript. Its styles are screen-only, so printed pages and labels are unchanged. The support chat window is a separate site in a frame and stays light.
+
+Black and grey logos and icons, such as the device icon in tables, turn light. The engine already recolors inline SVG icons and CSS background icons. It leaves `<img>` elements alone, so the extension samples each portal image (downscaled on a canvas, cached per URL). An image that is at least 20% transparent and drawn in one black or grey tone is recolored to the light text tone. A mostly black logo with colored accents is inverted with its hue kept. Photos, colorful artwork and colored branding such as the purple wordmark are unchanged. Images from another site that does not allow reading their pixels are left as they are.
+
+To avoid a white flash on reload, the on/off state is mirrored to a `ubif-plus.dark-hint` value in the portal's local storage, which paints a dark background until the engine starts.
+
+## Note templates (Unreleased)
+
+A **Note templates** button sits under Portal's work-order notes (`data-testid="notes-input"`), the note boxes in Portal's status dialogs (`notes-area-text-field`) and both note boxes in the Update Today editor. It offers eight status templates and two lead templates:
+
+- **Status:** Repair/Diag In Progress, Awaiting Diag, Awaiting Diag (Price Quote Ready), Awaiting Callback/Device, Quality Inspection, Repaired/Unrepairable RFP, Declined RFP (In Store), Need to Order Parts (Multiday).
+- **Leads:** Lead (Customer Contacted), Lead (Customer NOT Contacted).
+
+A **Check-in templates** button sits under check-in Additional Details (`additional-details-note`, or `DeviceDiagSubIssues_Notes` on Samsung). It offers Multiday Device, Insurance Mobile Device, In Warranty Device and OOP Mobile Device notes.
+
+The wording follows the Tech FOH Cheat Sheet. Search the menu by name or content.
+
+A template never replaces what you wrote:
+
+- **Where it goes:** at the caret you last placed in the field. Without a caret it goes at the end of work-order notes, or at the start of check-in notes, so Extra Details stays last. A blank line separates it from existing text.
+- **Notes limit:** a template that would push the field past its limit (2,000 characters) is refused with a message.
+- **How it reaches Portal:** inserted through the field's normal input event, so Portal saves it like typed text.
+
+Edit any template's wording in **Settings → Note templates**. Edits save as you type, are marked Edited, and **Restore default** brings back the standard wording. An unedited template follows future wording updates. Wording is stored in extension storage (`ubif-plus.note-templates.v1`).
+
+## Keyboard shortcuts (Unreleased)
+
+**Settings → Keyboard shortcuts** lists 18 actions: any of the 14 templates, each Samsung form, and turning dark mode on or off. Nothing is bound by default. To record a shortcut, click its button and press the combination. **Backspace** clears it and **Escape** cancels.
+
+- Every shortcut needs Ctrl, Alt/Option or Cmd, so it also works while typing in a notes field.
+- Keys are read by physical position, so Option+letter works on a Mac.
+- Combinations that universal search (Cmd/Ctrl+K) or the browser already use, such as Ctrl/Cmd+C, are refused.
+- A combination already used by another action is refused, with the action named.
+
+A template shortcut inserts into the notes field you last used, or the only one on the page. Otherwise it says what to open first. A Samsung form shortcut opens that form's review dialog on a Samsung work order. Bindings are stored in extension storage (`ubif-plus.hotkeys.v1`), and shortcuts are shown beside templates in the menu.
+
+## Samsung exception forms (Unreleased)
+
+On a Samsung work order (a Galaxy/Samsung device, or any order with a GSPN ticket) a **Samsung forms** button appears beside the work order heading. It opens a review dialog for one of three Sprinklr requests:
+
+| Request | Sprinklr choices | Details used |
+| --- | --- | --- |
+| **GD Bypass** | Exception Request → Galaxy Diagnostic Tool → Asurion Repair | Galaxy Diagnostic Tool version, device SKU, GSPN ticket, work order, IMEI |
+| **Fenrir Bypass** | Exception Request → Fenrir → Customer Declined SW Update, SVC Connection Performed = Yes | GSPN ticket, work order, IMEI |
+| **WER Request** | Process Requests → WER Request | Work order, IMEI |
+
+Every request also sends your email, technician name, store number (UBIF Location), store email and repair location type. They are prefilled as follows:
+
+- **Email and name:** your Portal profile.
+- **Store number and store email:** the current store's name. For "Manchester CT #878" that gives 878 and `manchesterct@ubreakifix.com`.
+- **IMEI and device SKU:** the order's device.
+- **GSPN ticket:** the order's partner job, falling back to a "Ticket no." note.
+
+Every value can be edited. Missing or malformed details are marked and keep the form from opening. Your repair location type and GD tool version are saved as settings, a corrected store email is remembered for that store, and an edited email is kept as your email override.
+
+**Open Sprinklr form** opens the form in a new tab and fills it from top to bottom, waiting for each follow-up question to appear. Fields are matched by their exact label, so "Email Address" never lands in "Store Email Address", and the store is chosen by whole number, so #878 never picks #1878. A banner on the form reports the result:
+
+- **Default:** the form is left filled for you to review and press Submit.
+- **Automatic submission (Settings → Samsung forms):** GD Bypass and WER Request are submitted, but only when every field filled.
+- **Fenrir:** never submitted automatically, because the SVC connection screenshot must be attached first.
+
+Any field that could not be filled is listed by name so you can complete it.
+
+The worker opens only the fixed Sprinklr form URL. It keeps the validated details in extension session storage for that one tab, which content scripts cannot read directly. A Sprinklr tab the extension did not open is never filled, and the details are dropped when the form reports back, the tab closes, or 15 minutes pass. Data sources were checked against Portal's public R92.4 frontend: `GET /api/workorder/:id` (`CustomerDevice.imei`, `CustomerDevice.DeviceCatalog.name`, `PartnerJob.PartnerJobAttributes` type 53 = GSPN ticket), `GET /api/note` for the fallback, and `@ubif/util-store`'s `auth.user` and `auth.currentStore`. The Sprinklr form was modeled on its observed field labels; an authenticated end-to-end check against the live form is still outstanding.
 
 ## Sidebar (0.9.0)
 
@@ -136,7 +209,7 @@ The UBIF Support chat opens on every portal page without covering it. Left alone
 
 ## Scope and privacy
 
-The content script loads on this portal host to handle client-side navigation from other portal pages, with universal search active wherever the portal header is present. Column enhancements activate only on `/repair/workorders` and `/check-in/arrivals`. The permissions requested are `storage` (settings and column layouts) and `notifications` (the desktop note for support messages that arrive while the chat is hidden).
+The content script loads on this portal host to handle client-side navigation from other portal pages, with universal search active wherever the portal header is present. Column enhancements activate only on `/repair/workorders` and `/check-in/arrivals`. The permissions requested are `storage` (settings and column layouts) and `notifications` (the desktop note for support messages that arrive while the chat is hidden). A second content script runs on `forms-prod.sprinklr.com` only to fill a Samsung exception form that you opened from a work order.
 
 - Column ids, visibility, order, widths, and sort are saved in extension-local storage under `ubif-plus.columns.v1.*`.
 - Feature toggles and timing preferences are saved in extension-local storage under `ubif-plus.settings.v1` and are written by the popup and full settings page.
@@ -146,6 +219,8 @@ The content script loads on this portal host to handle client-side navigation fr
 - Universal search sends read-only queries to the portal’s same-origin `/api/customers`, `/api/workorders` (POST lookup), `/api/repair/available-parts`, `/api/arrivals/upcoming-arrivals`, `/api/customers/<id>/arrivals` for a unique customer match, and `/api/boh/inventory/<serial>` endpoints using the existing session. Search results do not overwrite the column data feed.
 - The Update Today board reads current-store work orders and notes and writes user-requested dates, supported status changes, workflow resets and notes through same-origin Portal APIs.
 - The support-chat handling reads the widget's container, frame, same-origin transcript and message composer, and the vendor's existing session-storage resume value. Draft and UI recovery state stays in per-tab session storage; position stays in extension storage. Opening a chat tab inherits the portal tab's session storage without exporting it to another origin. Message text shown in a desktop notification travels from the content script to the extension's background worker and into the local notification; it is never sent anywhere else.
+- Dark mode reads the portal's stylesheets to recolor them. A stylesheet the portal loads from another site (such as a font stylesheet) may be fetched again for this; nothing is sent with it.
+- Samsung forms put your email, name, store and the order's work order number, IMEI, device and GSPN ticket into Sprinklr's form fields, in a tab you opened, only after you review them. Nothing is sent to Sprinklr until the form is submitted, by you or, if you turned it on, automatically.
 - No analytics, no telemetry, no third-party requests.
 
 Only columns this catalog knows are offered as data columns; the adapter reads the observed `table > thead > tr > th[data-column-id]` structure for the portal-rendered set, and unknown headers still appear (grouped under **Table**) without invented fields. Portal markup changes may require an adapter update.

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Samsung forms · Preview</title>
+<style>
+:root{--aui-primary:#8224ce;--aui-on-surface:#26232b;--aui-on-surface-soft:#6c6673;--aui-outline:#cec8d3;--aui-surface-variant:#f6f3f8;font:15px/1.5 system-ui;color:#26232b;background:#f9f8fb}
+body{margin:0}header{background:#fff;padding:20px 40px;border-bottom:1px solid #e4e0e9;display:flex;justify-content:space-between}main{max-width:1100px;margin:32px auto;padding:0 24px}
+h1{font-size:22px;font-weight:500;display:flex;align-items:center;flex-wrap:wrap;gap:4px}.card{background:#fff;border:1px solid #e4e0e9;border-radius:12px;padding:20px 24px;margin-top:16px}.muted{color:#6c6673;font-size:14px}
+</style>
+<header><strong>ubreakifix <span style="color:#8224cf">nextgen +</span></strong><span class="muted">Extension preview · fictional data</span></header>
+<main><h1><span data-aui="text">Work order #500089742 | Alex Morgan</span></h1>
+<div class="card"><p data-aui="text">Samsung Galaxy S21 5G Phantom Gray (none)</p><p class="muted">IMEI: 350166280848735 · Ready for work</p></div>
+<div class="card"><p class="muted">Notes</p><div class="note-field"><label for="note">Add a note</label><textarea id="note" data-testid="notes-input" rows="4" maxlength="2000" style="display:block;width:100%;margin-top:6px;padding:10px;border:1px solid #cec8d3;border-radius:8px;font:inherit"></textarea></div><p>Alex created a GSPN ticket. Ticket no. 4184243168</p></div></main>
+<script>
+const saved = JSON.parse(localStorage.getItem('demo-samsung') || '{}');
+const sent = [];
+window.chrome = {
+  runtime: { sendMessage: async message => { sent.push(message); console.info('[preview] would open Sprinklr with', message); return { ok: true }; } },
+  storage: { local: { get: async key => (key in saved ? { [key]: saved[key] } : {}), set: async v => { Object.assign(saved, v); localStorage.setItem('demo-samsung', JSON.stringify(saved)); } }, onChanged: { addListener() {} } }
+};
+window.__samsungSent = sent;
+const workorder = { workorderId: 500089742, CustomerDevice: { customerId: 77, imei: '350166280848735', DeviceCatalog: { name: 'Samsung Galaxy S21 5G Phantom Gray (none)' } },
+  PartnerJob: { partnerJobId: 9, PartnerJobAttributes: [{ partnerJobAttributeTypeId: 53, value: '4184243168' }] } };
+const realFetch = window.fetch.bind(window);
+window.fetch = (url, options) => String(url).startsWith('/api/workorder/') ? Promise.resolve({ ok: true, json: async () => ({ workorder }) }) : realFetch(url, options);
+addEventListener('message', e => { if (e.data?.type === 'message-context-request') postMessage({ source: 'ubif-plus', type: 'tech-context', email: 'alex.tech@ubreakifix.com', name: 'Alex Tech', storeId: '12', storeName: 'Manchester CT #878' }, '*'); });
+</script>
+<script src="/extension/settings.js"></script><script src="/extension/note-templates.js"></script><script src="/extension/hotkey-model.js"></script><script src="/extension/note-picker.js"></script><script src="/extension/hotkeys.js"></script><script src="/extension/samsung-model.js"></script><script src="/extension/samsung.js"></script></html>

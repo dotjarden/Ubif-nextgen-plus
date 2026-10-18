@@ -25,9 +25,13 @@ Built for Chrome and `portal.ubreakifix.net`. Runs inside your existing portal s
 | **Update Today** | See active work orders due today or earlier; click a card to schedule the next update, change a supported status, or read and add notes (⌘/Ctrl+Enter); open the customer's Portal messages beside the editor. Statuses with nothing due become drop targets above the board. |
 | **Message templates** | Reusable customer messages in the Arrivals and Workorders chat, with detail chips (first name, device, appointment, work order) filled from the selected customer. |
 | **Sidebar** | Labelled icons when collapsed, a More row that opens its menu, Support Ticket and Enhancement Idea styled to match, and your collapse choice kept on resize. |
+| **Dark mode** | Darken the portal and the extension's own panels, optionally only when your device is in dark mode, with brightness, contrast and sepia controls. Black and grey logos and icons turn light. Printing is unchanged. |
+| **Samsung forms** | On Samsung work orders, open the Sprinklr GD Bypass, Fenrir Bypass or WER Request form already filled from the order, your Portal profile and your store. Review the details first; the form is left for you to submit unless you turn on automatic submission. |
+| **Note templates** | Eight work-order status templates, two lead templates and four check-in templates, one click away under Portal's notes fields and the Update Today editor. Templates are added beside what you wrote, never over it, and their wording is editable. |
+| **Keyboard shortcuts** | Bind any template, Samsung form or dark mode to a key combination such as ⌥⇧D. |
 | **Custom columns** | Show, hide, reorder, and resize Workorders and Arrivals columns. Save a separate layout for each view. |
 | **Support chat** | Move and minimize chat while keeping the portal usable; recover supported sessions and receive configurable unread alerts. |
-| **Your preferences** | 41 controls across eight feature categories, searchable settings, per-category resets, and a full-page settings view. |
+| **Your preferences** | 56 controls across twelve feature categories, a template wording editor, a shortcut recorder, searchable settings, per-category resets, and a full-page settings view. |
 
 Want the details? Read the [feature guide](docs/FEATURES.md), including keyboard controls, scanning rules, column behavior, and support-session limits.
 
@@ -90,13 +94,17 @@ Open the toolbar popup and choose a category—or use **Find a setting**. **Open
 | Category | Available preferences |
 | --- | --- |
 | Home | Hide the Home calendar; turn the sidebar improvements on or off. |
+| Appearance | Dark mode or a dimmed mode; follow your device's light or dark setting; brightness, contrast, sepia, and grayscale. |
+| Note templates | Status and lead templates under notes; check-in templates under Additional Details; edit or restore each template's wording. |
 | Messages & employee | Message templates and quick shortcuts; show your first name in the header, with an optional override. |
 | Check-in | Extra Details fields and the Battery not working shortcut. |
 | Universal search | Enable search; choose result categories, shortcut, typing delay, minimum characters, inline result tags, opening results in new tabs, and inline buyback buttons. |
 | Update Today | Enable the board; include tomorrow; configure periodic refresh, status dragging, and empty columns. |
 | Barcode scanning | Enable scanning; choose navigation, search forwarding, receiving, OEM field focus, and automatic confirmation. |
+| Samsung forms | Show the button; automatic submission; repair location type; Galaxy Diagnostic Tool version; your email override. |
 | Tables | Customize Workorders and Arrivals columns independently; enable Arrivals pagination and choose 10/25/50/100 rows per page. |
 | Support chat | Enable enhancements; choose desktop notifications, unread badges, and message previews. |
+| Keyboard shortcuts | Turn shortcuts on or off; record a key combination for any template, Samsung form or dark mode. |
 
 Changes save immediately and apply to open portal tabs. Disabled child controls retain their values until the parent feature is enabled again. Category resets preserve unrelated preferences and column layouts. **Updates & help** explains how to update your installation and links to release notes.
 

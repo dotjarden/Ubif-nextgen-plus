@@ -65,10 +65,18 @@ test('settings fall back to defaults, keep known keys only, and clamp the number
     searchCustomers: true, searchWorkOrders: true, searchItems: true, searchClaims: true, searchSerials: true, searchNewTab: false, searchBuyback: true,
     scannerOpenLinks: true, scannerSearch: true, scannerReceiving: true, scannerOEMFocus: true, scannerOEMConfirm: true,
     columnsWorkorders: true, columnsArrivals: true, arrivalsPagination: true, arrivalsPageSize: 10, supportDesktopNotifications: true, supportUnreadBadge: true,
-    supportMessagePreview: true, boardAutoRefresh: true, boardDragDrop: true, boardShowEmpty: true
+    supportMessagePreview: true, boardAutoRefresh: true, boardDragDrop: true, boardShowEmpty: true,
+    darkMode: false, darkModeFollowSystem: false, darkBrightness: 100, darkContrast: 100, darkSepia: 0, darkGrayscale: 0, darkDimmed: false,
+    noteTemplates: true, noteTemplatesCheckin: true, hotkeys: true,
+    samsungForms: true, samsungAutoSubmit: false, samsungRepairType: 'Store', samsungGdVersion: '', samsungEmail: ''
   });
-  const next = await S.set({ searchDebounceMs: 5, searchMinChars: 99, boardRefreshSec: 1e6, columns: false, theme: 'dark' });
+  const next = await S.set({ searchDebounceMs: 5, searchMinChars: 99, boardRefreshSec: 1e6, columns: false, theme: 'dark', darkBrightness: 400, darkSepia: -3 });
   assert.equal(next.searchDebounceMs, 100, 'debounce floor');
+  assert.equal(next.darkBrightness, 150, 'brightness ceiling');
+  assert.equal(next.darkSepia, 0, 'sepia floor');
+  assert.equal((await S.set({ samsungRepairType: 'Warehouse' })).samsungRepairType, 'Store', 'unknown choices fall back');
+  assert.equal((await S.set({ samsungRepairType: 'Kiosk' })).samsungRepairType, 'Kiosk');
+  await S.set({ samsungRepairType: 'Store' });
   assert.equal(next.searchMinChars, 10, 'minimum-character ceiling');
   assert.equal(next.boardRefreshSec, 600, 'refresh ceiling');
   assert.equal(next.columns, false);
@@ -131,10 +139,12 @@ test('the toolbar button opens a popup wired to every settings key', async t => 
   assert.equal(manifest.action.default_popup, 'popup.html');
   assert.equal(manifest.permissions.includes('storage'), true);
   assert.equal(manifest.content_scripts[1].js[0], 'settings.js', 'settings load before the consumers');
+  assert.equal(manifest.content_scripts[1].run_at, 'document_start', 'settings are ready for the document_start theme and every idle script');
+  assert.equal(manifest.content_scripts[2].js.includes('settings.js'), false, 'one settings module per world');
   const dom = new JSDOM(popupHtml, { url: 'chrome-extension://abcdef/popup.html', runScripts: 'outside-only' });
   t.after(() => dom.window.close());
   const doc = dom.window.document;
-  assert.deepEqual([...doc.querySelectorAll('script')].map(node => node.getAttribute('src')), ['settings.js', 'popup.js']);
+  assert.deepEqual([...doc.querySelectorAll('script')].map(node => node.getAttribute('src')), ['settings.js', 'note-templates.js', 'hotkey-model.js', 'popup.js', 'popup-editors.js']);
   dom.window.eval(settingsScript);
   const controls = [...doc.querySelectorAll('[data-key]')];
   const keys = controls.map(node => node.dataset.key);

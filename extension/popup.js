@@ -83,7 +83,8 @@
     const edit = live => {
       const number = control.value.trim() === '' ? NaN : Number(control.value);
       if (live && control.type === 'number' && (!Number.isFinite(number) || !control.validity.valid)) return;
-      const value = control.type === 'checkbox' ? control.checked : control.type === 'text' ? control.value : Number.isFinite(number) ? number : S.defaults[control.dataset.key];
+      const text = control.type === 'text' || control.type === 'email' || typeof S.defaults[control.dataset.key] === 'string';
+      const value = control.type === 'checkbox' ? control.checked : text ? control.value : Number.isFinite(number) ? number : S.defaults[control.dataset.key];
       if (value === (pendingEdits.get(control.dataset.key)?.value ?? current?.[control.dataset.key])) return;
       save({ [control.dataset.key]: value });
     };
