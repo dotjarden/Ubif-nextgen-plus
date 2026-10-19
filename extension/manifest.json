@@ -61,7 +61,8 @@
         "note-picker.js",
         "hotkeys.js",
         "samsung-model.js",
-        "samsung.js"
+        "samsung.js",
+        "imei-copy.js"
       ],
       "run_at": "document_idle"
     },

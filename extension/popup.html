@@ -104,6 +104,7 @@ html.full-page { width:auto; min-width:0; }
   <a href="#messages" data-section="messages">Messages &amp; employee</a>
   <a href="#templates" data-section="templates">Note templates</a>
   <a href="#checkin" data-section="checkin">Check-in</a>
+  <a href="#workorders" data-section="workorders">Work orders</a>
   <a href="#search" data-section="search">Universal search</a>
   <a href="#board" data-section="board">Update Today</a>
   <a href="#scanner" data-section="scanner">Barcode scanning</a>
@@ -144,6 +145,10 @@ html.full-page { width:auto; min-width:0; }
   <label class="row"><span>Extra Details fields<small>Add and require the extra diagnosis fields before continuing. Turning this off keeps saved notes.</small></span><input type="checkbox" data-key="checkin" data-depends="" disabled></label>
   <label class="row"><span>Battery not working shortcut<small>Show the shortcut for the Portal battery diagnosis options.</small></span><input type="checkbox" data-key="checkinBattery" data-depends="checkin" disabled></label>
   <button class="reset" type="button" data-reset="checkin" disabled>Restore defaults</button>
+</section>
+<section id="workorders" aria-labelledby="workorders-title"><h2 id="workorders-title" tabindex="-1">Work orders</h2>
+  <label class="row"><span>Copy IMEI button<small>Show a copy button beside each IMEI on a work order. One click copies just the number.</small></span><input type="checkbox" data-key="workorderImeiCopy" data-depends="" disabled></label>
+  <button class="reset" type="button" data-reset="workorders" disabled>Restore defaults</button>
 </section>
 <section id="search" aria-labelledby="search-title"><h2 id="search-title" tabindex="-1">Universal search</h2>
   <label class="row"><span>Enable universal search<small>Replace the portal search box with universal search.</small></span><input type="checkbox" data-key="search" data-depends="" disabled></label>

@@ -67,7 +67,7 @@ test('settings fall back to defaults, keep known keys only, and clamp the number
     columnsWorkorders: true, columnsArrivals: true, arrivalsPagination: true, arrivalsPageSize: 10, supportDesktopNotifications: true, supportUnreadBadge: true,
     supportMessagePreview: true, boardAutoRefresh: true, boardDragDrop: true, boardShowEmpty: true,
     darkMode: false, darkModeFollowSystem: false, darkBrightness: 100, darkContrast: 100, darkSepia: 0, darkGrayscale: 0, darkDimmed: false,
-    noteTemplates: true, noteTemplatesCheckin: true, hotkeys: true,
+    noteTemplates: true, noteTemplatesCheckin: true, hotkeys: true, workorderImeiCopy: true,
     samsungForms: true, samsungAutoSubmit: false, samsungRepairType: 'Store', samsungGdVersion: '', samsungEmail: ''
   });
   const next = await S.set({ searchDebounceMs: 5, searchMinChars: 99, boardRefreshSec: 1e6, columns: false, theme: 'dark', darkBrightness: 400, darkSepia: -3 });
