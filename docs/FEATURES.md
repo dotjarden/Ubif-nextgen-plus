@@ -82,7 +82,7 @@ Every request also sends your email, technician name, store number (UBIF Locatio
 
 Every value can be edited. Missing or malformed details are marked and keep the form from opening. Your repair location type and GD tool version are saved as settings, a corrected store email is remembered for that store, and an edited email is kept as your email override.
 
-**Open Sprinklr form** opens the form in a new tab and fills it from top to bottom, waiting for each follow-up question to appear. Fields are matched by their exact label, so "Email Address" never lands in "Store Email Address", and the store is chosen by whole number, so #878 never picks #1878. A banner on the form reports the result:
+**Open Sprinklr form** opens the form in a new tab and fills it from top to bottom, waiting for each follow-up question to appear. Fields are found the way WD40's Portal Pro finds them on the live form, preferring an exact label and never taking a longer field's label for a shorter one, so "Email Address" never lands in "Store Email Address", and the store is chosen by whole number, so #878 never picks #1878. A banner on the form reports the result:
 
 - **Default:** the form is left filled for you to review and press Submit.
 - **Automatic submission (Settings → Samsung forms):** GD Bypass and WER Request are submitted, but only when every field filled.

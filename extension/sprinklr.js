@@ -2,9 +2,13 @@
    only in a tab the extension opened from a Portal work order: the background
    worker hands this tab its job, and any other Sprinklr page gets none.
 
-   Fields are found by their visible label, matched exactly (ignoring case,
-   spacing and a required "*"), so "Email Address" never lands in "Store Email
-   Address". A control named the same way by aria-label or placeholder counts
+   Finding fields follows WD40's Portal Pro, which fills this form today: a
+   label is any element, or a "label"-classed one, whose text holds the field
+   name; a dropdown is the combobox input after it, opened by clicking it and
+   its parent, typed into, and answered by clicking a matching option. An
+   exact label wins over one that only contains the name, and a label that
+   names a longer field ("Store Email Address") never stands in for a shorter
+   one ("Email Address"). A control named by aria-label or placeholder counts
    too. The search reaches into shadow roots and same-origin frames, since
    Sprinklr's widgets may render in either. Each later label is waited for,
    because Sprinklr shows the follow-up questions only after the dropdowns
@@ -28,7 +32,7 @@
   const hostOf = node => node.parentElement || (node.parentNode instanceof windowOf(node).ShadowRoot ? node.parentNode.host : null);
   function visible(node) {
     for (let current = node; current && current.nodeType === 1; current = hostOf(current)) {
-      if (current.hidden || current.getAttribute('aria-hidden') === 'true') return false;
+      if (current.hidden) return false;
       const style = windowOf(current).getComputedStyle(current);
       if (style.display === 'none' || style.visibility === 'hidden') return false;
     }
@@ -56,16 +60,35 @@
   }
   const all = (selector, scopes = roots()) => scopes.flatMap(root => [...root.querySelectorAll(selector)]);
 
-  /* The innermost visible element whose whole text is the label. */
-  function findLabel(text, scopes = roots()) {
+  /* Elements that may be labels, in page order: labelled ones first, then
+     the parent of every text node, as Portal Pro searches. */
+  function labelCandidates(scopes) {
+    const marked = all('label, legend, [class*="label" i]', scopes), parents = [];
+    for (const root of scopes) {
+      const walker = (root.ownerDocument || root).createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) if (node.parentElement && node.textContent.trim()) parents.push(node.parentElement);
+    }
+    return [...new Set([...marked, ...parents])].filter(node => !ours(node) &&
+      !node.closest('[role="option"], [role="listbox"], select, option, button, script, style'));
+  }
+
+  /* The label for a field: the innermost visible element whose whole text is
+     the name, else the first whose text contains it and no longer field name
+     from `others`. */
+  function findLabel(text, scopes = roots(), others = []) {
     const wanted = normalize(text);
+    const longer = others.map(normalize).filter(other => other !== wanted && other.includes(wanted));
+    const candidates = labelCandidates(scopes);
     let best = null;
-    for (const node of all('label, legend, span, div, p, h3, h4, h5, h6, td, th', scopes)) {
-      if (ours(node) || node.closest('[role="option"], [role="listbox"], select, option, button')) continue;
+    for (const node of candidates) {
       if (normalize(node.textContent) !== wanted || !visible(node)) continue;
       if (!best || best.contains(node)) best = node;
     }
-    return best;
+    if (best) return best;
+    return candidates.find(node => {
+      const own = normalize(node.textContent);
+      return own.length < wanted.length + 40 && own.includes(wanted) && !longer.some(other => own.includes(other)) && visible(node);
+    }) || null;
   }
 
   const TEXT = 'input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]):not([type=file]):not([role=combobox]):not([aria-haspopup=listbox]), textarea';
@@ -99,8 +122,8 @@
       (normalize(node.getAttribute('aria-label')) === wanted || normalize(node.getAttribute('placeholder')) === wanted)) || null;
   }
 
-  function findControl(text, selector) {
-    const scopes = roots(), label = findLabel(text, scopes);
+  function findControl(text, selector, others) {
+    const scopes = roots(), label = findLabel(text, scopes, others);
     return (label && controlFor(label, selector)) || namedControl(text, selector, scopes);
   }
 
@@ -135,15 +158,6 @@
     control.dispatchEvent(new view.Event('change', { bubbles: true }));
   }
 
-  /* Composed like a real click, so listeners outside a shadow root hear it. */
-  function press(node) {
-    const view = windowOf(node);
-    for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
-      const Event_ = type.startsWith('pointer') && typeof view.PointerEvent === 'function' ? view.PointerEvent : view.MouseEvent;
-      node.dispatchEvent(new Event_(type, { bubbles: true, cancelable: true, composed: true, view }));
-    }
-  }
-
   /* Exact text first, then a prefix, then containment; a store number only
      matches as a whole number ("#878", "878 - Manchester"). */
   function pickOption(options, value, number) {
@@ -157,6 +171,16 @@
       options[texts.findIndex(text => text.includes(wanted))] || null;
   }
 
+  /* Portal Pro's option lists, most specific first. */
+  const OPTIONS = ['[role="option"]', '[role="listbox"] li', '[class*="option" i]', 'li'];
+  function findOption(value, number) {
+    for (const selector of OPTIONS) {
+      const option = pickOption(all(selector).filter(node => !ours(node) && visible(node) && node.textContent.trim()), value, number);
+      if (option) return option;
+    }
+    return null;
+  }
+
   async function choose(control, value, number, timings) {
     const view = windowOf(control);
     if (control.tagName === 'SELECT') {
@@ -167,36 +191,43 @@
       control.dispatchEvent(new view.Event('change', { bubbles: true }));
       return true;
     }
-    press(control);
+    // Opened the way Portal Pro opens it: a click on the box, then the input.
+    control.parentElement?.click();
+    control.click();
     control.focus();
     // Typing narrows long lists such as UBIF Location.
-    if (control.tagName === 'INPUT') setValue(control, number ? value.replace(/\D/g, '') : value);
-    const option = await waitFor(() => pickOption(all('[role="option"]').filter(node => !ours(node) && visible(node)), value, number), timings.option);
+    if (control.tagName === 'INPUT') {
+      control.dispatchEvent(new view.KeyboardEvent('keydown', { bubbles: true, composed: true }));
+      setValue(control, number ? value.replace(/\D/g, '') : value);
+    }
+    const option = await waitFor(() => findOption(value, number), timings.option);
     if (!option) {
       control.dispatchEvent(new view.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
       return false;
     }
     option.scrollIntoView?.({ block: 'nearest' });
-    press(option);
+    option.click();
     await sleep(POLL_MS);
     return true;
   }
 
+  /* A button reading "Submit", else Portal Pro's submit selectors. */
   function submitButton() {
-    return all('button, input[type=submit]').find(node => usable(node) &&
-      /^submit$/i.test((node.value || node.textContent || '').trim())) || null;
+    const buttons = all('button, input[type=submit]').filter(usable);
+    return buttons.find(node => /^submit$/i.test((node.value || node.textContent || '').trim())) ||
+      buttons.find(node => node.matches('[type="submit"], [class*="submit" i], [data-testid*="submit" i]')) || null;
   }
 
   /* Fills each step in order. When the first field never appears and no
      other label of the form is on the page either, it stops: this is not
      the form it expects, and waiting on every field would only look stuck. */
   async function fill(job, timings = TIMINGS) {
-    const steps = M.steps(job), failed = [];
+    const steps = M.steps(job), failed = [], labels = steps.map(step => step.label);
     for (const [index, step] of steps.entries()) {
       show('working', index ? `Filling ${step.label}…` : 'Waiting for the Sprinklr form…');
       const selector = step.dropdown ? CHOICE : TEXT;
-      const control = await waitFor(() => findControl(step.label, selector), index ? timings.nextField : timings.firstField, 100);
-      if (!control && !index && !steps.some(other => findLabel(other.label) || namedControl(other.label, other.dropdown ? CHOICE : TEXT))) {
+      const control = await waitFor(() => findControl(step.label, selector, labels), index ? timings.nextField : timings.firstField, 100);
+      if (!control && !index && !steps.some(other => findLabel(other.label, roots(), labels) || namedControl(other.label, other.dropdown ? CHOICE : TEXT))) {
         return { filled: 0, total: steps.length, failed: steps.map(other => other.label), notFound: true, labels: pageLabels() };
       }
       let ok = false;
@@ -256,7 +287,7 @@
     let submitted = false;
     if (current.autoSubmit && !result.failed.length) {
       const button = await waitFor(submitButton, 2000);
-      if (button) { press(button); submitted = true; }
+      if (button) { button.click(); submitted = true; }
     }
     try { await chrome.runtime.sendMessage({ type: 'ubif-plus-samsung-done' }); } catch { /* the job expires anyway */ }
     if (result.notFound) show('warn', `Could not find the ${definition.name} fields`,

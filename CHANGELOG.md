@@ -10,7 +10,7 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Fixed
 
-- **Samsung forms**: the Sprinklr filler no longer sits on "Filling…" when it can't find the form ([#3](https://github.com/dotjarden/Ubif-nextgen-plus/issues/3)). It now also finds fields named by aria-label or placeholder and fields inside shadow roots or same-origin frames. If none of the form's questions appear, the banner says so after the first wait and lists the labels the page does show, and an unexpected error ends in a banner instead of a stuck one.
+- **Samsung forms**: the Sprinklr filler no longer sits on "Filling…" when it can't find the form ([#3](https://github.com/dotjarden/Ubif-nextgen-plus/issues/3)). It now finds fields the way WD40's Portal Pro does on the live form: a label may hold more than the field name, dropdowns open with a click and answer from plain list items as well as ARIA options, and hidden-from-screen-reader wrappers no longer hide the form. An exact label still wins, and "Store Email Address" is never taken for "Email Address". It also finds fields named by aria-label or placeholder and fields inside shadow roots or same-origin frames. If none of the form's questions appear, the banner says so after the first wait and lists the labels the page does show, and an unexpected error ends in a banner instead of a stuck one.
 
 ## [0.9.1] — 2026-10-18
 

@@ -166,7 +166,7 @@ const sprinklrForm = `<!doctype html><body><form id="form">
 <script>
   const list = document.getElementById('list');
   let active = null;
-  document.addEventListener('mousedown', event => {
+  document.addEventListener('click', event => {
     const box = event.target.closest('[role=combobox]');
     if (!box) return;
     active = box; list.replaceChildren();
@@ -183,8 +183,19 @@ const sprinklrForm = `<!doctype html><body><form id="form">
   document.getElementById('form').addEventListener('submit', event => { event.preventDefault(); document.body.dataset.submitted = 'yes'; });
 </script></body>`;
 
-function sprinklrPage(job, { dropOption } = {}) {
-  const markup = dropOption ? sprinklrForm.replace(`|${dropOption}`, '') : sprinklrForm;
+/* The same form with the quirks Portal Pro copes with: labels holding more
+   than the field name, options that are plain classed list items, and an
+   aria-hidden wrapper. */
+const looseForm = sprinklrForm
+  .replace('<div class="label"><span>Store Email Address</span><span>*</span></div>', '<div class="label">Store Email Address (store inbox) *</div>')
+  .replace('<div class="label"><span>Email Address</span><span>*</span></div>', '<div class="label">Email Address (where Samsung replies) *</div>')
+  .replace('<form id="form">', '<div aria-hidden="true"><form id="form">').replace('</form>', '</form></div>')
+  .replace('<ul role="listbox" id="list" hidden>', '<ul class="menu" id="list" hidden>')
+  .replace("li.setAttribute('role', 'option');", "li.className = 'menu-option';");
+
+function sprinklrPage(job, { dropOption, loose } = {}) {
+  const base = loose ? looseForm : sprinklrForm;
+  const markup = dropOption ? base.replace(`|${dropOption}`, '') : base;
   const dom = new JSDOM(markup, { url: 'https://forms-prod.sprinklr.com/guided-workflows/6544db26d4b8393a0b65ebb7', runScripts: 'dangerously', pretendToBeVisual: true });
   const w = dom.window;
   const sent = [];
@@ -235,6 +246,20 @@ test('a missing answer is reported and blocks automatic submission', async t => 
   assert.match(page.banner(), /Filled 14 of 15 fields/);
   assert.match(page.banner(), /Galaxy Diagnostic Exception Reason/);
   assert.equal(page.field('imei').value, '350166280848735', 'later fields still fill');
+});
+
+test('labels that only contain the field name, classed options and aria-hidden wrappers still fill, as in Portal Pro', async t => {
+  const M = model();
+  const page = sprinklrPage(M.job('gd', values, false), { loose: true });
+  t.after(() => page.dom.window.close());
+  await until(page.w, () => page.sent.includes('ubif-plus-samsung-done'), 15000);
+  const { field } = page;
+  assert.equal(field('email').value, 'alex.tech@ubreakifix.com', '"Store Email Address (store inbox)" is not taken for Email Address');
+  assert.equal(field('storeEmail').value, 'manchesterct@ubreakifix.com');
+  assert.equal(field('location').dataset.chosen, 'Manchester CT #878');
+  assert.equal(field('reason').dataset.chosen, 'Asurion Repair');
+  assert.equal(field('imei').value, '350166280848735');
+  assert.match(page.banner(), /GD Bypass filled/);
 });
 
 test('a Sprinklr tab the extension did not open is left alone', async t => {
