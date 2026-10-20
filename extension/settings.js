@@ -58,6 +58,7 @@
     noteTemplates: true,
     noteTemplatesCheckin: true,
     hotkeys: true,
+    workorderImeiCopy: true,
     samsungForms: true,
     samsungAutoSubmit: false,
     samsungRepairType: 'Store',

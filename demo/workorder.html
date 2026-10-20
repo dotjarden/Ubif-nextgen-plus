@@ -7,7 +7,7 @@ h1{font-size:22px;font-weight:500;display:flex;align-items:center;flex-wrap:wrap
 </style>
 <header><strong>ubreakifix <span style="color:#8224cf">nextgen +</span></strong><span class="muted">Extension preview · fictional data</span></header>
 <main><h1><span data-aui="text">Work order #500089742 | Alex Morgan</span></h1>
-<div class="card"><p data-aui="text">Samsung Galaxy S21 5G Phantom Gray (none)</p><p class="muted">IMEI: 350166280848735 · Ready for work</p></div>
+<div class="card"><p data-aui="text">Samsung Galaxy S21 5G Phantom Gray (none)</p><div class="details"><p class="text muted">IMEI: 350166280848735</p><p class="muted">Ready for work</p></div></div>
 <div class="card"><p class="muted">Notes</p><div class="note-field"><label for="note">Add a note</label><textarea id="note" data-testid="notes-input" rows="4" maxlength="2000" style="display:block;width:100%;margin-top:6px;padding:10px;border:1px solid #cec8d3;border-radius:8px;font:inherit"></textarea></div><p>Alex created a GSPN ticket. Ticket no. 4184243168</p></div></main>
 <script>
 const saved = JSON.parse(localStorage.getItem('demo-samsung') || '{}');
@@ -23,4 +23,4 @@ const realFetch = window.fetch.bind(window);
 window.fetch = (url, options) => String(url).startsWith('/api/workorder/') ? Promise.resolve({ ok: true, json: async () => ({ workorder }) }) : realFetch(url, options);
 addEventListener('message', e => { if (e.data?.type === 'message-context-request') postMessage({ source: 'ubif-plus', type: 'tech-context', email: 'alex.tech@ubreakifix.com', name: 'Alex Tech', storeId: '12', storeName: 'Manchester CT #878' }, '*'); });
 </script>
-<script src="/extension/settings.js"></script><script src="/extension/note-templates.js"></script><script src="/extension/hotkey-model.js"></script><script src="/extension/note-picker.js"></script><script src="/extension/hotkeys.js"></script><script src="/extension/samsung-model.js"></script><script src="/extension/samsung.js"></script></html>
+<script src="/extension/settings.js"></script><script src="/extension/note-templates.js"></script><script src="/extension/hotkey-model.js"></script><script src="/extension/note-picker.js"></script><script src="/extension/hotkeys.js"></script><script src="/extension/samsung-model.js"></script><script src="/extension/samsung.js"></script><script src="/extension/imei-copy.js"></script></html>
