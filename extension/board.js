@@ -99,7 +99,10 @@
   function render() {
     const rows = visible(); lanes.replaceChildren(); emptyLanes.replaceChildren();
     const permanent = new Set([2, 3, 7, 8, 9, 10, 13]);
-    for (const state of M.statuses.filter(s => (config.boardShowEmpty !== false && permanent.has(s.id)) || rows.some(r => Number(r.workorderStatusId) === s.id))) {
+    // Orders in a status the board has no lane for get a lane named by Portal.
+    const extra = [...new Map(rows.filter(r => !M.status(r.workorderStatusId))
+      .map(r => [Number(r.workorderStatusId), { id: Number(r.workorderStatusId), name: r.workorderStatusName || 'Other status' }])).values()];
+    for (const state of M.statuses.concat(extra).filter(s => (config.boardShowEmpty !== false && permanent.has(s.id)) || rows.some(r => Number(r.workorderStatusId) === s.id))) {
       const items = rows.filter(r => Number(r.workorderStatusId) === state.id);
       const lane = el('section', '', { class: 'lane', 'aria-label': state.name, 'data-status': state.id });
       const heading = el('h3', state.name); heading.append(el('span', String(items.length))); lane.append(heading);
@@ -278,7 +281,7 @@
       const statusPill = el('span', '', { class: 'pill status-pill' });
       const duePill = el('span', '', { class: 'pill' });
       function renderMeta() {
-        statusPill.textContent = M.status(snapshot.workorderStatusId)?.name || 'Portal status';
+        statusPill.textContent = M.status(snapshot.workorderStatusId)?.name || snapshot.workorderStatusName || 'Portal status';
         const due = M.localInput(snapshot.nextUpdate);
         const overdue = !!due && due.slice(0, 10) < M.localInput(new Date()).slice(0, 10);
         duePill.textContent = due
