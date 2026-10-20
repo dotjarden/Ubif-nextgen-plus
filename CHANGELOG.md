@@ -8,6 +8,10 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 - **Copy IMEI on work orders**: a copy button beside each IMEI on a work order copies just the number in one click and briefly shows Copied. Toggle it under Settings → Work orders.
 
+### Fixed
+
+- **Samsung forms**: the Sprinklr filler no longer sits on "Filling…" when it can't find the form ([#3](https://github.com/dotjarden/Ubif-nextgen-plus/issues/3)). It now also finds fields named by aria-label or placeholder and fields inside shadow roots or same-origin frames. If none of the form's questions appear, the banner says so after the first wait and lists the labels the page does show, and an unexpected error ends in a banner instead of a stuck one.
+
 ## [0.9.1] — 2026-10-18
 
 ### Added

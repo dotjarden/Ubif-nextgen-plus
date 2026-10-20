@@ -88,7 +88,7 @@ Every value can be edited. Missing or malformed details are marked and keep the 
 - **Automatic submission (Settings → Samsung forms):** GD Bypass and WER Request are submitted, but only when every field filled.
 - **Fenrir:** never submitted automatically, because the SVC connection screenshot must be attached first.
 
-Any field that could not be filled is listed by name so you can complete it.
+Any field that could not be filled is listed by name so you can complete it. A field also counts when its control is named by aria-label or placeholder, and the filler looks inside shadow roots and same-origin frames. If none of the form's questions appear within 30 seconds, the banner says it could not find the fields and lists the labels the page does show.
 
 The worker opens only the fixed Sprinklr form URL. It keeps the validated details in extension session storage for that one tab, which content scripts cannot read directly. A Sprinklr tab the extension did not open is never filled, and the details are dropped when the form reports back, the tab closes, or 15 minutes pass. Data sources were checked against Portal's public R92.4 frontend: `GET /api/workorder/:id` (`CustomerDevice.imei`, `CustomerDevice.DeviceCatalog.name`, `PartnerJob.PartnerJobAttributes` type 53 = GSPN ticket), `GET /api/note` for the fallback, and `@ubif/util-store`'s `auth.user` and `auth.currentStore`. The Sprinklr form was modeled on its observed field labels; an authenticated end-to-end check against the live form is still outstanding.
 

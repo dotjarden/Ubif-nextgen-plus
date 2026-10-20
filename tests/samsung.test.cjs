@@ -245,6 +245,71 @@ test('a Sprinklr tab the extension did not open is left alone', async t => {
   assert.equal(page.banner(), '');
 });
 
+/* The GD Bypass questions as native controls, every one shown at once.
+   Half are named by aria-label or placeholder instead of a <label>, and the
+   form can sit in a shadow root or a same-origin frame. */
+const gdChoices = { 'UBIF Location': ['Hartford CT #1878', 'Manchester CT #878'], 'Repair Location Type': ['Store', 'Kiosk'],
+  'Issue Type': ['Exception Request'], 'Exception Type': ['Fenrir', 'Galaxy Diagnostic Tool'], 'Galaxy Diagnostic Exception Reason': ['Asurion Repair'] };
+const nativeForm = () => model().FORMS.gd.fields.map(({ label }, index) => {
+  const control = gdChoices[label] ? `<select name="${label}"${index % 2 ? ` aria-label="${label}"` : ''}><option value="">Select</option>${gdChoices[label].map(text => `<option>${text}</option>`).join('')}</select>`
+    : `<input name="${label}"${index % 2 ? ` ${index % 4 === 1 ? 'aria-label' : 'placeholder'}="${label}"` : ''}>`;
+  return `<div class="q">${index % 2 ? '' : `<label>${label} *</label>`}${control}</div>`;
+}).join('');
+
+function hostedPage(where) {
+  const body = where === 'none' ? '<p>Sign in to continue</p><label>Username</label><input placeholder="Password">'
+    : where === 'page' ? nativeForm() : '<div id="host"></div><iframe id="frame"></iframe>';
+  const dom = new JSDOM(`<!doctype html><body>${body}</body>`, { url: 'https://forms-prod.sprinklr.com/guided-workflows/6544db26d4b8393a0b65ebb7', runScripts: 'dangerously', pretendToBeVisual: true });
+  const w = dom.window;
+  if (where === 'shadow') w.document.getElementById('host').attachShadow({ mode: 'open' }).innerHTML = nativeForm();
+  if (where === 'frame') w.document.getElementById('frame').contentDocument.body.innerHTML = nativeForm();
+  const sent = [];
+  w.chrome = { runtime: { sendMessage: async message => { sent.push(message.type); return { ok: true, job: null }; } } };
+  w.eval(modelScript);
+  w.eval(fillerScript);
+  const scope = where === 'shadow' ? w.document.getElementById('host').shadowRoot : where === 'frame' ? w.document.getElementById('frame').contentDocument : w.document;
+  const field = name => scope.querySelector(`[name="${name}"]`);
+  const banner = () => w.document.querySelector('[data-ubif-sprinklr]')?.shadowRoot?.textContent || '';
+  return { dom, w, sent, field, banner };
+}
+
+for (const where of ['page', 'shadow', 'frame']) {
+  test(`the filler finds fields by label, aria-label or placeholder (${where})`, async t => {
+    const page = hostedPage(where);
+    t.after(() => page.dom.window.close());
+    await page.w.UBIFPlusSprinklr.run(model().job('gd', values, false));
+    const { field } = page;
+    assert.equal(field('Email Address').value, 'alex.tech@ubreakifix.com');
+    assert.equal(field('Store Email Address').value, 'manchesterct@ubreakifix.com');
+    assert.equal(field('UBIF Location').value, 'Manchester CT #878');
+    assert.equal(field('Exception Type').value, 'Galaxy Diagnostic Tool');
+    assert.equal(field('IMEI').value, '350166280848735');
+    assert.equal(field('Description').value, 'Asurion Repair');
+    assert.match(page.banner(), /GD Bypass filled/);
+    assert.equal(page.sent.at(-1), 'ubif-plus-samsung-done');
+  });
+}
+
+test('a page without the form says so instead of waiting on every field', async t => {
+  const page = hostedPage('none');
+  t.after(() => page.dom.window.close());
+  const started = Date.now();
+  await page.w.UBIFPlusSprinklr.run(model().job('gd', values, true), { firstField: 300, nextField: 5000, option: 3000 });
+  assert.ok(Date.now() - started < 3000, 'stops after the first wait');
+  assert.match(page.banner(), /Could not find the GD Bypass fields/);
+  assert.match(page.banner(), /Looked for "Email Address"; this page shows "Username", "Password"/);
+});
+
+test('an unexpected error ends in a banner, not a stuck "Filling…"', async t => {
+  const page = hostedPage('page');
+  t.after(() => page.dom.window.close());
+  page.w.Element.prototype.querySelectorAll = () => { throw new Error('boom'); };
+  page.w.Document.prototype.querySelectorAll = page.w.Element.prototype.querySelectorAll;
+  await page.w.UBIFPlusSprinklr.run(model().job('gd', values, false));
+  assert.match(page.banner(), /Could not fill GD Bypass/);
+  assert.match(page.banner(), /boom/);
+});
+
 /* Portal work order page with fictional API responses. */
 function portalPage({ workorder = order(), notes = [], settings = {} } = {}) {
   const dom = new JSDOM('<!doctype html><body><main><h1><span data-aui="text">Work order #500089742 | Alex Morgan</span></h1></main></body>', {
