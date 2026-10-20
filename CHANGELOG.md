@@ -6,7 +6,7 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Added
 
-- **Copy IMEI on work orders**: a copy button beside each IMEI on a work order copies just the number in one click and briefly shows Copied. Toggle it under Settings → Work orders.
+- **Copy IMEI on work orders**: a copy button beside each IMEI on a work order copies just the number in one click and briefly turns green; its tooltip reads Copied. Toggle it under Settings → Work orders.
 
 ## [0.9.1] — 2026-10-18
 

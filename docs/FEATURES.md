@@ -265,6 +265,6 @@ Implementation notes: printing runs in `label-page.js` in the page's main world,
 
 ## Copy IMEI on work orders
 
-On a work order, each line Portal shows as `IMEI: <number>` (the device card, and any other IMEI line on the page) gets a small copy button after the number. One click copies only the digits; the button turns green and reads **Copied** for 1.5 seconds. The click never opens Portal's device editor behind it. Lines without a real 14–17 digit IMEI (such as `IMEI: N/A`) get no button.
+On a work order, each line Portal shows as `IMEI: <number>` (the device card, and any other IMEI line on the page) gets a small copy button after the number. One click copies only the digits; the button turns green for 1.5 seconds, and its tooltip and screen reader label say **Copied**. The click never opens Portal's device editor behind it. Lines without a real 14–17 digit IMEI (such as `IMEI: N/A`) get no button.
 
 Toggle **Work orders → Copy IMEI button** in extension settings (on by default). The button follows Portal's re-renders and moves to a changed IMEI. The real device card markup was taken from Portal's `ubif-components.js` (`device_info.imei` line); a live check in a signed-in work order is still needed.
