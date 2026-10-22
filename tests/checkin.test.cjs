@@ -21,12 +21,12 @@ function fixture(t, variant = 'additional-details-note', notes = 'Customer repor
 for (const variant of ['additional-details-note', 'DeviceDiagSubIssues_Notes']) {
   test(`${variant}: all fields join existing native notes through Portal handler`, t => {
     const f = fixture(t, variant);
-    assert.equal(f.root.querySelectorAll('input,select').length, 8);
-    f.set('model', 'iPhone 15'); f.set('color', 'Blue'); f.set('issue', 'Charging port');
+    assert.equal(f.root.querySelectorAll('input,select').length, 9);
+    f.set('model', 'iPhone 15'); f.set('color', 'Blue'); f.set('issue', 'Charging port'); f.set('peripherals', 'Charger, case');
     f.set('fmip', 'off'); f.set('accessories', 'yes'); f.set('services', 'no'); f.set('eta', 'unsure'); f.set('price', '$99');
     const saved = f.changes.at(-1);
     assert.match(saved, /^Customer reports intermittent charging\.\n\nExtra Details:/);
-    for (const text of ['Model: iPhone 15', 'Color: Blue', 'Device Issue: Charging port', 'FMIP: off', 'Accessories Offered: yes', 'Services Offered: no', 'ETA: unsure', 'Price Est: $99']) assert.ok(saved.includes(text));
+    for (const text of ['Model: iPhone 15', 'Color: Blue', 'Device Issue: Charging port', 'Peripherals: Charger, case', 'FMIP: off', 'Accessories Offered: yes', 'Services Offered: no', 'ETA: unsure', 'Price Est: $99']) assert.ok(saved.includes(text));
     f.set('price', '$129');
     assert.equal(f.native.value.split('Extra Details:').length, 2);
     assert.ok(!f.native.value.includes('$99'));
@@ -175,6 +175,44 @@ test('legacy branded sections hydrate and migrate to plain Extra Details on edit
   assert.ok(f.native.value.includes('Native note')); assert.ok(f.native.value.includes('Follow-up note'));
   f.set('price', '$109'); assert.equal(f.native.value.split('Extra Details:').length, 2);
 });
+test('Peripherals is a free-text input saved between Device Issue and FMIP', t => {
+  const f = fixture(t, 'additional-details-note', '');
+  const control = f.root.querySelector('[name=peripherals]');
+  assert.equal(control.tagName, 'INPUT'); assert.equal(control.type, 'text'); assert.equal(control.maxLength, 200);
+  assert.ok(control.required); assert.match(control.closest('label').textContent, /^Peripherals \*/);
+  f.set('issue', 'Cracked screen'); f.set('peripherals', 'Charger, Otterbox case'); f.set('fmip', 'on');
+  assert.match(f.native.value, /\nDevice Issue: Cracked screen\nPeripherals: Charger, Otterbox case\nFMIP: on\n/);
+});
+test('every multiple-choice field offers NA, which saves, reloads and satisfies Continue', async t => {
+  const f = fixture(t);
+  for (const key of ['fmip', 'accessories', 'services']) {
+    const options = [...f.root.querySelectorAll(`[name=${key}] option`)].map(option => option.value);
+    assert.equal(options.at(-1), 'NA'); assert.equal(options[0], '');
+  }
+  assert.equal(f.root.querySelectorAll('select').length, 3);
+  completeExtra(f); f.set('fmip', 'NA'); f.set('accessories', 'NA'); f.set('services', 'NA');
+  assert.match(f.native.value, /FMIP: NA\nAccessories Offered: NA\nServices Offered: NA/);
+  const button = f.w.document.createElement('button'); button.dataset.testid = 'DeviceDiagIssues_Continue'; f.w.document.body.append(button);
+  let continued = 0; button.addEventListener('click', () => continued++); button.click(); assert.equal(continued, 1);
+  const saved = f.native.value, container = f.w.document.querySelector('[data-testid="device-diagnosis-container"]');
+  container.replaceChildren(); await tick();
+  const native = f.w.document.createElement('textarea'); native.dataset.testid = 'additional-details-note';
+  native.value = saved; native.__reactProps$test = { onChange() {} }; container.append(native); await tick();
+  const root = f.w.document.querySelector('#ubif-plus-checkin').shadowRoot;
+  for (const key of ['fmip', 'accessories', 'services']) assert.equal(root.querySelector(`[name=${key}]`).value, 'NA');
+  assert.equal(root.querySelector('[name=peripherals]').value, 'none');
+});
+test('sections saved before Peripherals existed still hydrate and gain the new line on edit', t => {
+  const older = 'Native note\n\nExtra Details:\nModel: Pixel\nColor: Blue\nDevice Issue: Charging\nFMIP: off\nAccessories Offered: yes\nServices Offered: no\nETA: unsure\nPrice Est: $99';
+  const f = fixture(t, 'additional-details-note', older);
+  assert.equal(f.root.querySelector('[name=model]').value, 'Pixel');
+  assert.equal(f.root.querySelector('[name=price]').value, '$99');
+  assert.equal(f.root.querySelector('[name=peripherals]').value, '');
+  f.set('peripherals', 'Charger');
+  assert.equal(f.native.value.split('Extra Details:').length, 2);
+  assert.ok(f.native.value.startsWith('Native note\n\nExtra Details:\n'));
+  assert.match(f.native.value, /Device Issue: Charging\nPeripherals: Charger\nFMIP: off/);
+});
 test('ordinary notes mentioning Extra Details remain intact', t => {
   const notes = 'Extra Details:\nCustomer says battery is slow.\nModel: customer unsure';
   const f = fixture(t, 'additional-details-note', notes); f.set('model', 'Pixel');
@@ -228,7 +266,7 @@ test('battery shortcut discovers every sibling category beyond the inner Hardwar
   assert.match(f.shortcut.querySelector('[role=status]').textContent, /All 5 diagnosis categories marked Can’t test/);
 });
 function completeExtra(f) {
-  for (const [key, value] of Object.entries({ model: 'Pixel', color: 'Black', issue: 'Battery', fmip: 'off', accessories: 'no', services: 'yes', eta: 'unsure', price: '$99' })) f.set(key, value);
+  for (const [key, value] of Object.entries({ model: 'Pixel', color: 'Black', issue: 'Battery', peripherals: 'none', fmip: 'off', accessories: 'no', services: 'yes', eta: 'unsure', price: '$99' })) f.set(key, value);
 }
 for (const [variant, id] of [['additional-details-note', 'DeviceDiagIssues_Continue'], ['DeviceDiagSubIssues_Notes', 'DeviceDiagSubIssues_Continue']]) {
   test(`${variant}: Continue requires every Extra Details field and allows a complete section`, t => {
@@ -236,7 +274,7 @@ for (const [variant, id] of [['additional-details-note', 'DeviceDiagIssues_Conti
     const button = f.w.document.createElement('button'); button.dataset.testid = id; f.w.document.body.append(button);
     let nativeCalls = 0; button.addEventListener('click', () => nativeCalls++);
     button.click(); assert.equal(nativeCalls, 0);
-    assert.match(f.root.querySelector('[role=status]').textContent, /Complete Extra Details: Model, Color, Device Issue, FMIP, Accessories Offered, Services Offered, ETA, Price Est/);
+    assert.match(f.root.querySelector('[role=status]').textContent, /Complete Extra Details: Model, Color, Device Issue, Peripherals, FMIP, Accessories Offered, Services Offered, ETA, Price Est/);
     assert.ok([...f.root.querySelectorAll('input,select')].every(control => control.required));
     completeExtra(f); f.set('color', '   '); button.click(); assert.equal(nativeCalls, 0);
     assert.equal(f.root.querySelector('[name=color]').getAttribute('aria-invalid'), 'true');

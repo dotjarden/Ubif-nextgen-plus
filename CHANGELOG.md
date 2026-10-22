@@ -6,6 +6,7 @@ User-visible changes are recorded here. **Unreleased** describes work in the cur
 
 ### Added
 
+- **Check-in Peripherals and NA**: Extra Details has a required **Peripherals** text box (what came in with the device, or “none”), and FMIP, Accessories Offered and Services Offered each offer **NA**. Extra Details saved before this update still loads.
 - **Copy IMEI on work orders**: a copy button beside each IMEI on a work order copies just the number in one click and briefly shows Copied. Toggle it under Settings → Work orders.
 
 ### Fixed
