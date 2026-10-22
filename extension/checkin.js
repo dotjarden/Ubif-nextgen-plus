@@ -8,10 +8,12 @@
   const LEGACY_START = '[UBIF Plus check-in]', LEGACY_END = '[/UBIF Plus check-in]';
   const HEADING = 'Extra Details:';
   const fields = [
-    ['model', 'Model', 100], ['color', 'Color', 80], ['issue', 'Device Issue', 400],
-    ['fmip', 'FMIP', ['off', 'on']], ['accessories', 'Accessories Offered', ['yes', 'no']],
-    ['services', 'Services Offered', ['yes', 'no']], ['eta', 'ETA', 100], ['price', 'Price Est', 100]
+    ['model', 'Model', 100], ['color', 'Color', 80], ['issue', 'Device Issue', 400], ['peripherals', 'Peripherals', 200],
+    ['fmip', 'FMIP', ['off', 'on', 'NA']], ['accessories', 'Accessories Offered', ['yes', 'no', 'NA']],
+    ['services', 'Services Offered', ['yes', 'no', 'NA']], ['eta', 'ETA', 100], ['price', 'Price Est', 100]
   ];
+  // Fields added after release. Sections saved before them still hydrate.
+  const added = new Set(['peripherals']);
   const selector = '[data-testid="additional-details-note"], [data-testid="DeviceDiagSubIssues_Notes"]';
   let active = null, config = { checkin: true, checkinBattery: true };
   function split(value) {
@@ -23,7 +25,10 @@
     } else {
       // Only recognize the complete ordered section we generate. Ordinary notes
       // mentioning Extra Details or individual labels remain untouched.
-      const pattern = new RegExp('(?:^|\\n)' + HEADING + '\\n' + fields.map(([, label]) => label + ': ([^\\n]*)').join('\\n') + '(?=\\n|$)', 'g');
+      const pattern = new RegExp('(?:^|\\n)' + HEADING + fields.map(([key, label]) => {
+        const line = '\\n' + label + ': [^\\n]*';
+        return added.has(key) ? `(?:${line})?` : line;
+      }).join('') + '(?=\\n|$)', 'g');
       const match = pattern.exec(value);
       if (!match) return { native: value, values: {} };
       start = match.index + (match[0].startsWith('\n') ? 1 : 0); end = match.index + match[0].length;
@@ -201,7 +206,7 @@
       input:focus,select:focus{outline:2px solid var(--aui-primary,#8224ce);outline-offset:1px}
       [role=status]{margin:8px 0 0;font-size:12px;color:var(--aui-on-surface-soft,#615b6b)}[role=status]:empty{display:none}[data-error=true]{color:var(--aui-error,#b3261e)}
       @media(max-width:600px){.grid{grid-template-columns:1fr}}
-      </style><section aria-labelledby="heading"><h3 id="heading">Extra Details</h3><p class="required-hint">All fields are required. Enter “unsure” for ETA when needed.</p><div class="grid"></div><p role="status" aria-live="polite"></p></section>`;
+      </style><section aria-labelledby="heading"><h3 id="heading">Extra Details</h3><p class="required-hint">All fields are required. Enter “unsure” for ETA or “none” for Peripherals when needed.</p><div class="grid"></div><p role="status" aria-live="polite"></p></section>`;
     const grid = root.querySelector('.grid'), status = root.querySelector('[role=status]');
     const controls = {}, parsed = split(textarea.value);
     let values = parsed.values, observedText = textarea.value, nativeEditPending = false;
@@ -218,6 +223,7 @@
         }
       } else { control.type = 'text'; control.maxLength = kind; }
       if (key === 'eta') control.placeholder = 'Time, date, or unsure';
+      if (key === 'peripherals') control.placeholder = 'Charger, case, SIM, or none';
       control.value = values[key] || '';
       controls[key] = control; wrapper.append(control); grid.append(wrapper);
       control.addEventListener(Array.isArray(kind) ? 'change' : 'input', () => sync(key));

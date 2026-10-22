@@ -41,8 +41,14 @@ test('due queue includes overdue and all today, excludes tomorrow, closed and un
   assert.equal(M.due(row('2026-10-10T00:00'), now, true), false);
   assert.equal(M.due(row(''), now), false);
   assert.equal(M.due(row('bad'), now), false);
-  assert.equal(M.due({ ...row('2026-10-08'), workorderStatusId: 15 }, now), false);
+  assert.equal(M.due({ ...row('2026-10-08'), workorderStatusId: 15, workorderStatusName: 'Closed' }, now), false);
+  assert.equal(M.due({ ...row('2026-10-08'), workorderStatusId: 16, workorderStatusName: 'Cancelled' }, now), false);
   assert.equal(M.due(row('2026-10-08'), now), true);
+});
+test('past-due orders in statuses the board has no lane for are still due', () => {
+  const now = new Date(2026, 9, 20, 10);
+  assert.equal(M.due({ workorderStatusId: 21, workorderStatusName: 'Awaiting customer', nextUpdate: '2026-10-01T09:00' }, now), true);
+  assert.equal(M.due({ workorderStatusId: 21, nextUpdate: '2026-10-19T09:00' }, now), true);
 });
 test('date/time round trips locally, supports later dates, and rejects invalid values', () => {
   assert.equal(M.localInput(M.toISO('2026-11-18T14:35')), '2026-11-18T14:35');
@@ -60,6 +66,7 @@ test('loads every page and rejects repeated or incomplete pagination', async () 
   assert.deepEqual(calls.map(c => c.page), [1, 2, 3]);
   assert.equal(calls[0].isCrossStoreSearch, false);
   assert.equal(calls[0].primaryFilter, 'Active');
+  assert.deepEqual(calls[0].workOrderStatusIds, [], 'same statuses as the native All list');
   const broken = M.createAPI(async () => ({ ok: true, json: async () => ({ workOrders: [base()], rowCount: 3 }) }));
   await assert.rejects(broken.list(), /pagination/);
 });
@@ -282,6 +289,20 @@ test('cards show overdue times in the error colour, open from anywhere, and empt
   assert.equal(root.querySelector('.lanes .lane[data-empty]'), null, 'the board itself only holds statuses with orders');
   card.querySelector('.customer').click(); await flush();
   assert.equal(root.querySelector('dialog').open, true);
+});
+
+test('a past-due order in an unlisted status gets its own lane named by Portal', async t => {
+  const { w } = await boot(t, { handle: async path => path === '/api/workorders' ? { ok: true, status: 200, json: async () => ({ workOrders: [
+    { ...base(), nextUpdate: '2020-01-01T12:00:00Z', customer: { fullName: 'Taylor Reed' } },
+    { ...base(), workorderId: 10001299, workorderStatusId: 21, workorderStatusName: 'Awaiting customer', nextUpdate: '2020-01-02T12:00:00Z', customer: { fullName: 'Sam Rivera' } }
+  ], rowCount: 2 }) } : undefined });
+  w.document.querySelector('#ubif-update-today-tab').click(); await flush();
+  const root = w.document.querySelector('#ubif-update-today-board').shadowRoot;
+  const lane = root.querySelector('.lanes .lane[data-status="21"]');
+  assert.ok(lane, 'unlisted status shows as a lane');
+  assert.match(lane.querySelector('h3').textContent, /^Awaiting customer1$/);
+  assert.match(lane.querySelector('.card .customer').textContent, /Sam Rivera/);
+  assert.match(root.querySelector('.status').textContent, /^2 orders · Synced/);
 });
 
 test('an overdue update time is suggested forward and notes show their links', async t => {

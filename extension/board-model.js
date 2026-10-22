@@ -25,8 +25,11 @@
     const pad = n => String(n).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   }
+  // The list is already limited to Portal's Active filter, so a status this file
+  // does not know is still a live order. Only names that read as finished drop out.
+  const closed = /\b(closed|cancel+ed|draft|completed?)\b/i;
   function due(record, now = new Date(), includeTomorrow = false) {
-    if (!activeIds.includes(Number(record.workorderStatusId))) return false;
+    if (closed.test(record.workorderStatusName || status(record.workorderStatusId)?.name || '')) return false;
     const input = localInput(record.nextUpdate);
     if (!input) return false;
     const end = new Date(now); end.setHours(0, 0, 0, 0); end.setDate(end.getDate() + (includeTomorrow ? 2 : 1));
@@ -81,7 +84,7 @@
       const records = new Map();
       for (let page = 1; page <= 200; page++) {
         const json = await request('workorders', 'POST', { page, pageSize: 100, primaryFilter: 'Active', tab: 'All',
-          workOrderStatusIds: activeIds, deviceTypeIds: [], programIds: [], serviceOutcome: [], needsAttention: false,
+          workOrderStatusIds: [], deviceTypeIds: [], programIds: [], serviceOutcome: [], needsAttention: false,
           order: 'nextUpdate,ASC', isCrossStoreSearch: false }, signal);
         if (!Array.isArray(json?.workOrders) || !Number.isFinite(json.rowCount) || json.rowCount < 0) throw new Error('Unexpected Portal work order response. Board was not replaced.');
         const before = records.size;

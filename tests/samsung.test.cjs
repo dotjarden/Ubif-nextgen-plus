@@ -166,7 +166,7 @@ const sprinklrForm = `<!doctype html><body><form id="form">
 <script>
   const list = document.getElementById('list');
   let active = null;
-  document.addEventListener('mousedown', event => {
+  document.addEventListener('click', event => {
     const box = event.target.closest('[role=combobox]');
     if (!box) return;
     active = box; list.replaceChildren();
@@ -183,8 +183,19 @@ const sprinklrForm = `<!doctype html><body><form id="form">
   document.getElementById('form').addEventListener('submit', event => { event.preventDefault(); document.body.dataset.submitted = 'yes'; });
 </script></body>`;
 
-function sprinklrPage(job, { dropOption } = {}) {
-  const markup = dropOption ? sprinklrForm.replace(`|${dropOption}`, '') : sprinklrForm;
+/* The same form with the quirks Portal Pro copes with: labels holding more
+   than the field name, options that are plain classed list items, and an
+   aria-hidden wrapper. */
+const looseForm = sprinklrForm
+  .replace('<div class="label"><span>Store Email Address</span><span>*</span></div>', '<div class="label">Store Email Address (store inbox) *</div>')
+  .replace('<div class="label"><span>Email Address</span><span>*</span></div>', '<div class="label">Email Address (where Samsung replies) *</div>')
+  .replace('<form id="form">', '<div aria-hidden="true"><form id="form">').replace('</form>', '</form></div>')
+  .replace('<ul role="listbox" id="list" hidden>', '<ul class="menu" id="list" hidden>')
+  .replace("li.setAttribute('role', 'option');", "li.className = 'menu-option';");
+
+function sprinklrPage(job, { dropOption, loose } = {}) {
+  const base = loose ? looseForm : sprinklrForm;
+  const markup = dropOption ? base.replace(`|${dropOption}`, '') : base;
   const dom = new JSDOM(markup, { url: 'https://forms-prod.sprinklr.com/guided-workflows/6544db26d4b8393a0b65ebb7', runScripts: 'dangerously', pretendToBeVisual: true });
   const w = dom.window;
   const sent = [];
@@ -237,12 +248,91 @@ test('a missing answer is reported and blocks automatic submission', async t => 
   assert.equal(page.field('imei').value, '350166280848735', 'later fields still fill');
 });
 
+test('labels that only contain the field name, classed options and aria-hidden wrappers still fill, as in Portal Pro', async t => {
+  const M = model();
+  const page = sprinklrPage(M.job('gd', values, false), { loose: true });
+  t.after(() => page.dom.window.close());
+  await until(page.w, () => page.sent.includes('ubif-plus-samsung-done'), 15000);
+  const { field } = page;
+  assert.equal(field('email').value, 'alex.tech@ubreakifix.com', '"Store Email Address (store inbox)" is not taken for Email Address');
+  assert.equal(field('storeEmail').value, 'manchesterct@ubreakifix.com');
+  assert.equal(field('location').dataset.chosen, 'Manchester CT #878');
+  assert.equal(field('reason').dataset.chosen, 'Asurion Repair');
+  assert.equal(field('imei').value, '350166280848735');
+  assert.match(page.banner(), /GD Bypass filled/);
+});
+
 test('a Sprinklr tab the extension did not open is left alone', async t => {
   const page = sprinklrPage(null);
   t.after(() => page.dom.window.close());
   await tick(page.w, 300);
   assert.equal(page.field('email').value, '');
   assert.equal(page.banner(), '');
+});
+
+/* The GD Bypass questions as native controls, every one shown at once.
+   Half are named by aria-label or placeholder instead of a <label>, and the
+   form can sit in a shadow root or a same-origin frame. */
+const gdChoices = { 'UBIF Location': ['Hartford CT #1878', 'Manchester CT #878'], 'Repair Location Type': ['Store', 'Kiosk'],
+  'Issue Type': ['Exception Request'], 'Exception Type': ['Fenrir', 'Galaxy Diagnostic Tool'], 'Galaxy Diagnostic Exception Reason': ['Asurion Repair'] };
+const nativeForm = () => model().FORMS.gd.fields.map(({ label }, index) => {
+  const control = gdChoices[label] ? `<select name="${label}"${index % 2 ? ` aria-label="${label}"` : ''}><option value="">Select</option>${gdChoices[label].map(text => `<option>${text}</option>`).join('')}</select>`
+    : `<input name="${label}"${index % 2 ? ` ${index % 4 === 1 ? 'aria-label' : 'placeholder'}="${label}"` : ''}>`;
+  return `<div class="q">${index % 2 ? '' : `<label>${label} *</label>`}${control}</div>`;
+}).join('');
+
+function hostedPage(where) {
+  const body = where === 'none' ? '<p>Sign in to continue</p><label>Username</label><input placeholder="Password">'
+    : where === 'page' ? nativeForm() : '<div id="host"></div><iframe id="frame"></iframe>';
+  const dom = new JSDOM(`<!doctype html><body>${body}</body>`, { url: 'https://forms-prod.sprinklr.com/guided-workflows/6544db26d4b8393a0b65ebb7', runScripts: 'dangerously', pretendToBeVisual: true });
+  const w = dom.window;
+  if (where === 'shadow') w.document.getElementById('host').attachShadow({ mode: 'open' }).innerHTML = nativeForm();
+  if (where === 'frame') w.document.getElementById('frame').contentDocument.body.innerHTML = nativeForm();
+  const sent = [];
+  w.chrome = { runtime: { sendMessage: async message => { sent.push(message.type); return { ok: true, job: null }; } } };
+  w.eval(modelScript);
+  w.eval(fillerScript);
+  const scope = where === 'shadow' ? w.document.getElementById('host').shadowRoot : where === 'frame' ? w.document.getElementById('frame').contentDocument : w.document;
+  const field = name => scope.querySelector(`[name="${name}"]`);
+  const banner = () => w.document.querySelector('[data-ubif-sprinklr]')?.shadowRoot?.textContent || '';
+  return { dom, w, sent, field, banner };
+}
+
+for (const where of ['page', 'shadow', 'frame']) {
+  test(`the filler finds fields by label, aria-label or placeholder (${where})`, async t => {
+    const page = hostedPage(where);
+    t.after(() => page.dom.window.close());
+    await page.w.UBIFPlusSprinklr.run(model().job('gd', values, false));
+    const { field } = page;
+    assert.equal(field('Email Address').value, 'alex.tech@ubreakifix.com');
+    assert.equal(field('Store Email Address').value, 'manchesterct@ubreakifix.com');
+    assert.equal(field('UBIF Location').value, 'Manchester CT #878');
+    assert.equal(field('Exception Type').value, 'Galaxy Diagnostic Tool');
+    assert.equal(field('IMEI').value, '350166280848735');
+    assert.equal(field('Description').value, 'Asurion Repair');
+    assert.match(page.banner(), /GD Bypass filled/);
+    assert.equal(page.sent.at(-1), 'ubif-plus-samsung-done');
+  });
+}
+
+test('a page without the form says so instead of waiting on every field', async t => {
+  const page = hostedPage('none');
+  t.after(() => page.dom.window.close());
+  const started = Date.now();
+  await page.w.UBIFPlusSprinklr.run(model().job('gd', values, true), { firstField: 300, nextField: 5000, option: 3000 });
+  assert.ok(Date.now() - started < 3000, 'stops after the first wait');
+  assert.match(page.banner(), /Could not find the GD Bypass fields/);
+  assert.match(page.banner(), /Looked for "Email Address"; this page shows "Username", "Password"/);
+});
+
+test('an unexpected error ends in a banner, not a stuck "Filling…"', async t => {
+  const page = hostedPage('page');
+  t.after(() => page.dom.window.close());
+  page.w.Element.prototype.querySelectorAll = () => { throw new Error('boom'); };
+  page.w.Document.prototype.querySelectorAll = page.w.Element.prototype.querySelectorAll;
+  await page.w.UBIFPlusSprinklr.run(model().job('gd', values, false));
+  assert.match(page.banner(), /Could not fill GD Bypass/);
+  assert.match(page.banner(), /boom/);
 });
 
 /* Portal work order page with fictional API responses. */
